@@ -8,19 +8,38 @@ var chainList = [];
 
 function scanFields() {
     scanRegexGroup();
-    // scanSearchFields();
+    initAddButton();
+}
+
+function initAddButton() {
+    $("#addRegexButton").on("click", function() {
+        let containerRegex = $("#containerRegex");
+        let regexCard = $("#" + chainList[chainList.length - 1]);
+        let newSequence = parseInt(regexCard.attr("data-sequence")) + 1;
+        let newRegexCard = regexCard.clone();
+        
+        containerRegex.append(newRegexCard);
+        newRegexCard.attr("id", GROUP_ID_PREFIX + "-" + newSequence)
+        newRegexCard.attr("data-sequence", newSequence)
+        newRegexCard.find(".card-title").text("Regex " + (newSequence + 1));
+
+        chainList.push(newRegexCard.attr("id"));
+        chainList = [];
+        scanRegexGroup();
+    })
 }
 
 function scanRegexGroup() {
     $(".regex-group").each(function(i, obj) {
         let groupId = $(this).attr('id');
 
-        let groupNumber = groupId.replace(/.+(\d+)$/, "$1");
+        // let groupSequence = groupId.replace(/.+(\d+)$/, "$1");
+        let groupSequence = $(this).attr('data-sequence');
 
-        let nextGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupNumber) + 1);
+        // let nextGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupSequence) + 1);
 
         chainList.push(groupId);
-        // console.log(groupId, groupNumber);
+        // console.log(groupId, groupSequence);
         //test
         let searchField = $(this).find(".search-regex-form");
         let inputField = $(this).find(".input-form");
@@ -29,38 +48,32 @@ function scanRegexGroup() {
         let outputField = $(this).find(".output-form");
 
         if (inputCheckboxField.length > 0) {
-            checkInput(inputCheckboxField, groupNumber, inputField);
+            checkInput(inputCheckboxField, groupSequence, inputField);
             inputCheckboxField.on("change", function(e){
-                // if ($(this).checked())
-                checkInput($(this), groupNumber, inputField);
+                checkInput($(this), groupSequence, inputField);
             })
         }
 
+        searchField.off("input");
         searchField.on("input", function(e) {
-            updateSearchRegex(groupNumber, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            updateRegexGroup(nextGroupId);
+            updateSearchRegex(groupSequence, searchField, inputField, subtituteField, outputField, inputCheckboxField);
+            // updateRegexGroup(nextGroupId);
+            updateNextRegexGroup(groupId);
         })
 
+        inputField.off("input");
         inputField.on("input", function(e) {
-            updateSearchRegex(groupNumber, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            updateRegexGroup(nextGroupId);
+            updateSearchRegex(groupSequence, searchField, inputField, subtituteField, outputField, inputCheckboxField);
+            // updateRegexGroup(nextGroupId);
+            updateNextRegexGroup(groupId);
         })
 
+        subtituteField.off("input");
         subtituteField.on("input", function(e) {
-            updateSearchRegex(groupNumber, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            updateRegexGroup(nextGroupId);
+            updateSearchRegex(groupSequence, searchField, inputField, subtituteField, outputField, inputCheckboxField);
+            // updateRegexGroup(nextGroupId);
+            updateNextRegexGroup(groupId);
         })
-    });
-}
-
-
-
-function scanSearchFields() {
-    $(".search-regex-form").on('input', function(event){
-        // event.stopPropagation();
-        // event.stopImmediatePropagation();
-        // console.log(event.target.value)
-        // event.target.parent
     });
 }
 
@@ -68,24 +81,28 @@ function updateRegexGroup(regexGroupId) {
     let regexGroup = $("#" + regexGroupId);
     if (regexGroup.length == 0)
         return;
-    // regexGroup.find(".search-regex-form").trigger("input");
-    // console.log("triggered " + regexGroupId)
     regexGroup.find(".input-form").trigger("input");
-    // regexGroup.find(".subtitute-regex-form").trigger("input");
-    // regexGroup.find(".output-form").trigger("input");
 }
 
-function updateSearchRegex(groupNumber, searchField, inputField, subtituteField, outputField, inputCheckboxField) {
+function updateNextRegexGroup(currentGroupId) {
+    // console.log("current id", currentGroupId);
+    let currentIndex = chainList.findIndex(x => x === currentGroupId);
+    if (currentIndex + 1 >= chainList.length)
+        return;
+    let regexGroup = $("#" + chainList[currentIndex + 1]);
+    // console.log("next group", regexGroup.attr("data-sequence"))
+    if (regexGroup.length == 0)
+        return;
+    regexGroup.find(".input-form").trigger("input");
+}
+
+function updateSearchRegex(groupSequence, searchField, inputField, subtituteField, outputField, inputCheckboxField) {
     try {
-        // console.log("oke");
-        // inputField.val("oke");
-        // subtituteField.val("oke");
-        // outputField.val("oke");
         let srcRegex = new RegExp(searchField.val(), "g");
 
         let checked = inputCheckboxField.is(':checked');
         if (checked) {
-            inputField.val(getPreviousOutput(groupNumber));
+            inputField.val(getPreviousOutput(groupSequence));
         }
         
         let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtituteField.val()) : inputField.val();
@@ -95,17 +112,15 @@ function updateSearchRegex(groupNumber, searchField, inputField, subtituteField,
     }
 }
 
-function getPreviousOutput(groupNumber) {
-    let prevGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupNumber) - 1);
+function getPreviousOutput(groupSequence) {
+    let prevGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupSequence) - 1);
     let prevRegexGroup = $("#" + prevGroupId);
     let outputField = prevRegexGroup.find(".output-form");
     return outputField.val();
 }
 
-function checkInput(checkbox, groupNumber, inputField) {
+function checkInput(checkbox, groupSequence, inputField) {
     let checked = checkbox.is(':checked');
-    let prevGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupNumber) - 1);
-    // console.log(prevInputFieldId, $("#" + prevInputFieldId));
     if (checked) {
         inputField.prop('readonly', true);
     } else {

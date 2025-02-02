@@ -48,6 +48,10 @@ function parseQueryParams() {
                 tempGroup[groupId].mode = param[1];
                 break;
 
+            case "i":
+                tempGroup[groupId].iteration = param[1];
+                break;
+
             default:
                 break;
         }
@@ -71,7 +75,8 @@ function parseQueryParams() {
             
             $(this).find(".search-regex-form").val(group.search);
             $(this).find(".subtitute-regex-form").val(group.replace);
-            $(this).find(".input-from-previous-output").prop('checked', group.inputFromPreviousOutput == "true");
+            $(this).find(".input-from-previous-output").prop('checked', !group.inputFromPreviousOutput ? true : group.inputFromPreviousOutput == "true");
+            $(this).find("input#iterate-regex").val(!group.iteration ? 1 : group.iteration);
 
         })
     }
@@ -279,7 +284,7 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
             inputField.val(getPreviousOutput(groupSequence));
         }
         
-        updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode);
+        updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode, iterateCount);
         // let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtitute) : inputField.val();
         let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode, iterateCount) : inputField.val();
         outputField.val(regexOutput);
@@ -296,13 +301,14 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
     }
 }
 
-function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPreviousOutput, flags, replaceMode){
+function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPreviousOutput, flags, replaceMode, iteration){
     this.searchParams.set("s" + groupSequence, searchValue);
     this.searchParams.set("r" + groupSequence, subtituteValue);
     if (inputFromPreviousOutput != null)
         this.searchParams.set("c" + groupSequence, inputFromPreviousOutput);
     this.searchParams.set("f" + groupSequence, flags);
     this.searchParams.set("m" + groupSequence, replaceMode);
+    this.searchParams.set("i" + groupSequence, iteration);
 
     var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
     history.pushState({}, '', newurl)

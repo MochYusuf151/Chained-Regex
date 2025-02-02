@@ -10,10 +10,10 @@ var searchParams;
 function scanFields() {
     scanRegexGroup();
     initAddButton();
-    getQueryParams();
+    parseQueryParams();
 }
 
-function getQueryParams() {
+function parseQueryParams() {
     let url_string = window.location.href;
     let url = new URL(url_string);
     this.searchParams = url.searchParams;
@@ -124,7 +124,7 @@ function addRegexCard(event, newSequenceRequest) {
 }
 
 function initFlagButtons(parentGroupId, groupId) {
-    parentGroupId.find("#flagsGroup input").each(function(i, obj) {
+    parentGroupId.find("#flagsGroup input.flag-button").each(function(i, obj) {
         $(this).on("click", function() {
             let checked = $(this).is(":checked");
             let value = $(this).attr("data-value");
@@ -141,7 +141,7 @@ function initFlagButtons(parentGroupId, groupId) {
 }
 
 function initReplaceButtons(parentGroupId, groupId) {
-    parentGroupId.find('input[name^="replace-mode"]').each(function(i, obj) {
+    parentGroupId.find('input.replace-mode-radio').each(function(i, obj) {
         $(this).on("click", function() {
             let checked = $(this).is(":checked");
             let value = $(this).attr("data-value");
@@ -151,6 +151,14 @@ function initReplaceButtons(parentGroupId, groupId) {
             parentGroupId.attr("replace-mode", groupValue);
 
             updateCurrentRegexGroup(groupId);
+        })
+    })
+}
+
+function initCopyButtons(parentGroupId, groupId, outputField) {
+    parentGroupId.find('button#copy-button').each(function(i, obj) {
+        $(this).on("click", function() {
+            navigator.clipboard.writeText(outputField.val());
         })
     })
 }
@@ -214,6 +222,8 @@ function scanRegexGroup() {
         initFlagButtons($(this), groupId);
 
         initReplaceButtons($(this), groupId);
+
+        initCopyButtons($(this), groupId, outputField);
     });
 }
 

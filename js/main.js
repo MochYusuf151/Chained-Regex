@@ -250,6 +250,14 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
         let replaceMode = groupForm.attr("replace-mode");
         let srcRegex = new RegExp(searchField.val(), flags);
         let subtitute = JSON.parse(`{ "text": "${subtituteField.val()}" }`).text;
+        let inputInfo = groupForm.find(".input-info small");
+        let outputInfo = groupForm.find(".output-info small");
+
+        if (inputField.val() != null) { 
+            let inputCharCount = inputField.val().length;
+            let inputLineCount = inputField.val().split("\n").length;
+            inputInfo.html(`${inputLineCount} Lines | ${inputCharCount} character`)
+        }
 
         let checked = inputCheckboxField.is(':checked');
         if (checked) {
@@ -260,6 +268,13 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
         // let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtitute) : inputField.val();
         let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode) : inputField.val();
         outputField.val(regexOutput);
+
+        if (regexOutput != null) { 
+            let outputCharCount = regexOutput.length;
+            let outputLineCount = regexOutput.split("\n").length;
+            outputInfo.html(`${outputLineCount} Lines | ${outputCharCount} character`)
+        }
+
     } catch (err) {
         outputField.val("Error!")
         console.error(err.message);

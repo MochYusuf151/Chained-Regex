@@ -55,7 +55,6 @@ function parseQueryParams() {
 
     for (let groupId in tempGroup) {
         let group = tempGroup[groupId]
-        console.log(group)
         if (groupId != "0" && groupId != "1") {
             addRegexCard(null, parseInt(groupId));
         }
@@ -310,7 +309,6 @@ function processRegex(inputValue, searchRegex, subtituteValue, replaceMode) {
         let replaceValue = "";
         const matches = inputValue.matchAll(searchRegex);
         for (const match of matches) {
-            console.log(match);
             replaceValue += match[0].replace(searchRegex, subtituteValue);
         }
         return replaceValue;

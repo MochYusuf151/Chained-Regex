@@ -152,6 +152,11 @@ function initReplaceButtons(parentGroupId, groupId) {
             updateCurrentRegexGroup(groupId);
         })
     })
+    parentGroupId.find('input#iterate-regex').each(function(i, obj) {
+        $(this).on("input", function() {
+            updateCurrentRegexGroup(groupId);
+        })
+    })
 }
 
 function initCopyButtons(parentGroupId, groupId, outputField) {
@@ -257,6 +262,7 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
     try {
         let flags = groupForm.attr("flags-value");
         let replaceMode = groupForm.attr("replace-mode");
+        let iterateCount = parseInt(groupForm.find("input#iterate-regex").val());
         let srcRegex = new RegExp(searchField.val(), flags);
         let subtitute = JSON.parse(`{ "text": "${subtituteField.val()}" }`).text;
         let inputInfo = groupForm.find(".input-info small");
@@ -275,7 +281,7 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
         
         updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode);
         // let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtitute) : inputField.val();
-        let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode) : inputField.val();
+        let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode, iterateCount) : inputField.val();
         outputField.val(regexOutput);
 
         if (regexOutput != null) { 
@@ -302,17 +308,22 @@ function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPrevious
     history.pushState({}, '', newurl)
  }
 
-function processRegex(inputValue, searchRegex, subtituteValue, replaceMode) {
-    if (replaceMode == "0") {
-        return inputValue.replace(searchRegex, subtituteValue);
-    } else {
-        let replaceValue = "";
-        const matches = inputValue.matchAll(searchRegex);
-        for (const match of matches) {
-            replaceValue += match[0].replace(searchRegex, subtituteValue);
+function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iteration) {
+    let outputValue;
+    for (let i = 0; i < iteration; i++) {
+        if (replaceMode == "0") {
+            outputValue = inputValue.replace(searchRegex, subtituteValue);
+        } else {
+            let replaceValue = "";
+            const matches = inputValue.matchAll(searchRegex);
+            for (const match of matches) {
+                replaceValue += match[0].replace(searchRegex, subtituteValue);
+            }
+            outputValue = replaceValue;
         }
-        return replaceValue;
+        inputValue = outputValue;
     }
+    return outputValue;
 }
 
 function getPreviousOutput(groupSequence) {

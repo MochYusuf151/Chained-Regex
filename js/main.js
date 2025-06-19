@@ -269,7 +269,8 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
         let replaceMode = groupForm.attr("replace-mode");
         let iterateCount = parseInt(groupForm.find("input#iterate-regex").val());
         let srcRegex = new RegExp(searchField.val(), flags);
-        let subtitute = JSON.parse(`{ "text": "${subtituteField.val()}" }`).text;
+        let subtitute = subtituteField.val().replaceAll("\"", "\\\"");
+        subtitute = JSON.parse(`{ "text": "${subtitute}" }`).text;
         let inputInfo = groupForm.find(".input-info small");
         let outputInfo = groupForm.find(".output-info small");
 

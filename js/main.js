@@ -194,8 +194,6 @@ function initGeneralCard() {
     $('#titleField').each(function(i, obj) {
         $(this).on("input", function() {
             let titleField = $("#titleField").val();
-            if (!titleField)
-                $("#titleField").val("");
             updateUrlTitle(titleField);
         })
     })
@@ -368,7 +366,7 @@ function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPrevious
  function updateUrlTitle(pageTitle){
     this.searchParams.set("title", pageTitle);
 
-    document.title = titleField ? titleField + " | Chained Regex" : "Chained Regex";
+    document.title = pageTitle ? pageTitle + " | Chained Regex" : "Chained Regex";
 
     var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
     history.pushState({}, '', newurl)

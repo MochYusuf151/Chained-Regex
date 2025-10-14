@@ -107,7 +107,7 @@ function initAddButton() {
 
 function addRegexCard(event, newSequenceRequest) {
     let containerRegex = $("#containerRegex");
-    let regexCard = $("#" + chainList[chainList.length - 1]);
+    let regexCard = $("#regexGroup-" + chainList[chainList.length - 1]);
     let newSequence = parseInt(regexCard.attr("data-sequence")) + 1;
     if (newSequenceRequest != null) {
         newSequence = newSequenceRequest;

@@ -178,6 +178,8 @@ function initCopyButtons(parentGroupId, groupId, outputField) {
 }
 
 function scanRegexGroup() {
+    
+
     $(".regex-group").each(function(i, obj) {
         let groupId = $(this).attr('id');
 
@@ -248,6 +250,14 @@ function scanRegexGroup() {
 
         initCopyButtons($(this), groupId, outputField);
     });
+
+    // Copy from last output
+    $('button#copy-last-button').each(function(i, obj) {
+        $(this).on("click", function() {
+            let lastOutputField = $("#regexGroup-" + (chainList.length - 1) + " .output-form").val();
+            navigator.clipboard.writeText(lastOutputField);
+        })
+    })
 }
 
 function updateRegexGroup(regexGroupId) {

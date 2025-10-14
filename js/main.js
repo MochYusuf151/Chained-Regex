@@ -398,18 +398,22 @@ function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iter
 function processScript(inputValue, searchRegex, scriptProcessor) {
     const matches = inputValue.matchAll(searchRegex);
     let outputValue = inputValue;
+    let matchIndex = 0;
     for (const match of matches) {
         let matchString = match[0];
         let originalString = match[0];
         let i = 0;
+        let groupIndex = 0;
         for (const group of match) {
             if (i++ == 0)
                 continue;
             let inputString = group;
             matchString = matchString.replace(inputString, eval(scriptProcessor));
+            groupIndex++;
         }
         // outputValue += matchString;
         outputValue = outputValue.replace(originalString, matchString);
+        matchIndex++;
     }
     return outputValue;
 }

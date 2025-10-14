@@ -51,6 +51,10 @@ function parseQueryParams() {
             case "i":
                 tempGroup[groupId].iteration = param[1];
                 break;
+            
+            case "sp":
+                tempGroup[groupId].scriptProcessor = param[1];
+                break;
 
             default:
                 break;
@@ -75,6 +79,7 @@ function parseQueryParams() {
             
             $(this).find(".search-regex-form").val(group.search);
             $(this).find(".subtitute-regex-form").val(group.replace);
+            $(this).find(".script-processor-form").val(group.scriptProcessor);
             $(this).find(".input-from-previous-output").prop('checked', !group.inputFromPreviousOutput ? true : group.inputFromPreviousOutput == "true");
             $(this).find("input#iterate-regex").val(!group.iteration ? 1 : group.iteration);
 
@@ -189,6 +194,7 @@ function scanRegexGroup() {
         let inputField = $(this).find(".input-form");
         let inputCheckboxField = $(this).find(".input-from-previous-output");
         let subtituteField = $(this).find(".subtitute-regex-form");
+        let scriptProcessorField = $(this).find(".script-processor-form");
         let outputField = $(this).find(".output-form");
 
         if (inputCheckboxField.length > 0) {
@@ -200,7 +206,7 @@ function scanRegexGroup() {
 
         inputField.off("input");
         inputField.on("input", function(e) {
-            updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
+            updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField, scriptProcessorField);
             // updateRegexGroup(nextGroupId);
             updateNextRegexGroup(groupId);
         })
@@ -222,6 +228,14 @@ function scanRegexGroup() {
         })
 
         inputCheckboxField.on("click", function(e) {
+            // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
+            // updateRegexGroup(nextGroupId);
+            // updateNextRegexGroup(groupId);
+            updateCurrentRegexGroup(groupId);
+        })
+
+        scriptProcessorField.off("input");
+        scriptProcessorField.on("input", function(e) {
             // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
             // updateRegexGroup(nextGroupId);
             // updateNextRegexGroup(groupId);
@@ -263,7 +277,7 @@ function updateNextRegexGroup(currentGroupId) {
     regexGroup.find(".input-form").trigger("input");
 }
 
-function updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField) {
+function updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField, scriptProcessorField) {
     try {
         let flags = groupForm.attr("flags-value");
         let replaceMode = groupForm.attr("replace-mode");
@@ -273,6 +287,7 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
         subtitute = JSON.parse(`{ "text": "${subtitute}" }`).text;
         let inputInfo = groupForm.find(".input-info small");
         let outputInfo = groupForm.find(".output-info small");
+        let scriptProcessor = scriptProcessorField.val();
 
         if (inputField.val() != null) { 
             let inputCharCount = inputField.val().length;
@@ -285,9 +300,9 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
             inputField.val(getPreviousOutput(groupSequence));
         }
         
-        updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode, iterateCount);
+        updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode, iterateCount, scriptProcessorField.val());
         // let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtitute) : inputField.val();
-        let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode, iterateCount) : inputField.val();
+        let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode, iterateCount, scriptProcessor) : inputField.val();
         outputField.val(regexOutput);
 
         if (regexOutput != null) { 
@@ -302,7 +317,7 @@ function updateSearchRegex(groupSequence, groupForm, searchField, inputField, su
     }
 }
 
-function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPreviousOutput, flags, replaceMode, iteration){
+function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPreviousOutput, flags, replaceMode, iteration, scriptProcessor){
     this.searchParams.set("s" + groupSequence, searchValue);
     this.searchParams.set("r" + groupSequence, subtituteValue);
     if (inputFromPreviousOutput != null)
@@ -310,13 +325,17 @@ function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPrevious
     this.searchParams.set("f" + groupSequence, flags);
     this.searchParams.set("m" + groupSequence, replaceMode);
     this.searchParams.set("i" + groupSequence, iteration);
+    this.searchParams.set("sp" + groupSequence, scriptProcessor);
 
     var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
     history.pushState({}, '', newurl)
  }
 
-function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iteration) {
+function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iteration, scriptProcessor) {
     let outputValue;
+    if (scriptProcessor) {
+        inputValue = processScript(inputValue, searchRegex, scriptProcessor);
+    }
     for (let i = 0; i < iteration; i++) {
         if (replaceMode == "0") {
             outputValue = inputValue.replace(searchRegex, subtituteValue);
@@ -329,6 +348,26 @@ function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iter
             outputValue = replaceValue;
         }
         inputValue = outputValue;
+    }
+    return outputValue;
+}
+
+
+function processScript(inputValue, searchRegex, scriptProcessor) {
+    const matches = inputValue.matchAll(searchRegex);
+    let outputValue = inputValue;
+    for (const match of matches) {
+        let matchString = match[0];
+        let originalString = match[0];
+        let i = 0;
+        for (const group of match) {
+            if (i++ == 0)
+                continue;
+            let inputString = group;
+            matchString = matchString.replace(inputString, eval(scriptProcessor));
+        }
+        // outputValue += matchString;
+        outputValue = outputValue.replace(originalString, matchString);
     }
     return outputValue;
 }

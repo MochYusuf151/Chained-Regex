@@ -8,6 +8,7 @@ var searchParams;
 
 
 function scanFields() {
+    initGeneralCard();
     scanRegexGroup();
     initAddButton();
     parseQueryParams();
@@ -18,6 +19,7 @@ function parseQueryParams() {
     let url = new URL(url_string);
     this.searchParams = url.searchParams;
 
+    let tempMetadata = {};
     let tempGroup = {};
     for (let param of searchParams) {
         let type = param[0].replace(/^(.+)\d+/, "$1");
@@ -56,10 +58,16 @@ function parseQueryParams() {
                 tempGroup[groupId].scriptProcessor = param[1];
                 break;
 
+            case "title":
+                tempMetadata.regexTitle = param[1];
+                break;                
+
             default:
                 break;
         }
     }
+
+    $("#titleField").val(tempMetadata.regexTitle);
 
     for (let groupId in tempGroup) {
         let group = tempGroup[groupId]
@@ -85,6 +93,8 @@ function parseQueryParams() {
 
         })
     }
+
+    
     // console.log(tempGroup);
 }
 
@@ -173,6 +183,16 @@ function initCopyButtons(parentGroupId, groupId, outputField) {
     parentGroupId.find('button#copy-button').each(function(i, obj) {
         $(this).on("click", function() {
             navigator.clipboard.writeText(outputField.val());
+        })
+    })
+}
+
+function initGeneralCard() {
+    $('#titleField').each(function(i, obj) {
+        $(this).on("input", function() {
+            let titleField = $("#titleField").val();
+            document.title = titleField ? titleField + " | Chained Regex" : "Chained Regex";
+            updateUrlTitle(titleField);
         })
     })
 }
@@ -336,6 +356,13 @@ function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPrevious
     this.searchParams.set("m" + groupSequence, replaceMode);
     this.searchParams.set("i" + groupSequence, iteration);
     this.searchParams.set("sp" + groupSequence, scriptProcessor);
+
+    var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
+    history.pushState({}, '', newurl)
+ }
+
+ function updateUrlTitle(pageTitle){
+    this.searchParams.set("title", pageTitle);
 
     var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
     history.pushState({}, '', newurl)

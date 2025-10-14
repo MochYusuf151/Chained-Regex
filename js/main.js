@@ -24,7 +24,7 @@ function parseQueryParams() {
     for (let param of searchParams) {
         let type = param[0].replace(/^(.+)\d+/, "$1");
         let groupId = param[0].replace(/.+(\d+)$/, "$1");
-        if (!tempGroup[groupId]) {
+        if (!tempGroup[groupId] && !isNaN(groupId)) {
             tempGroup[groupId] = {};
         }
 
@@ -107,14 +107,15 @@ function initAddButton() {
 
 function addRegexCard(event, newSequenceRequest) {
     let containerRegex = $("#containerRegex");
-    let regexCard = $("#regexGroup-" + chainList[chainList.length - 1]);
+    let regexCard = $("#" + chainList[chainList.length - 1]);
     let newSequence = parseInt(regexCard.attr("data-sequence")) + 1;
     if (newSequenceRequest != null) {
         newSequence = newSequenceRequest;
     }
     let newRegexCard = regexCard.clone();
+
     
-    newRegexCard.attr("id", GROUP_ID_PREFIX + "-" + newSequence)
+    newRegexCard.attr("id", GROUP_ID_PREFIX + "-" + newSequence)    
     newRegexCard.attr("data-sequence", newSequence)
     newRegexCard.find(".card-title").text("Regex " + (newSequence + 1));
 

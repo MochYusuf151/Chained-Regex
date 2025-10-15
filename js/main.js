@@ -399,9 +399,12 @@ function processScript(inputValue, searchRegex, scriptProcessor) {
     const matches = inputValue.matchAll(searchRegex);
     let outputValue = inputValue;
     let matchIndex = 0;
+    let startStringIndex = 0;
+    let endStringIndex = 0;
     for (const match of matches) {
         let matchString = match[0];
         let originalString = match[0];
+        let matchStartIndex = match.index;
         let i = 0;
         let groupIndex = 0;
         for (const group of match) {
@@ -412,7 +415,14 @@ function processScript(inputValue, searchRegex, scriptProcessor) {
             groupIndex++;
         }
         // outputValue += matchString;
-        outputValue = outputValue.replace(originalString, matchString);
+
+        let substringPreviousMatch = outputValue.substring(0, startStringIndex);
+        let substringCurrentMatch = outputValue.substring(startStringIndex);
+        substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString)
+        outputValue = substringPreviousMatch + substringCurrentMatch;
+
+        startStringIndex += matchString ? matchString.length : 0;
+
         matchIndex++;
     }
     return outputValue;

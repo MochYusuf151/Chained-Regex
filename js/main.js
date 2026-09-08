@@ -112,8 +112,6 @@
                     table: tableRest
                 }))
             };
-            console.log('Encoding state original:', state);
-            console.log('Encoding state cleaned:', cleanedState);
             const json = JSON.stringify(cleanedState);
             return window.LZString ? LZString.compressToEncodedURIComponent(json) : encodeURIComponent(json);
         } catch (e) { return ''; }
@@ -125,7 +123,6 @@
             const parsed = JSON.parse(json);
             if (!parsed || !Array.isArray(parsed.stages)) return null;
             parsed.stages = parsed.stages.map(s => defaultStage(s));
-            console.log('Decoded state:', parsed);
             return parsed;
         } catch (e) { return null; }
     }

@@ -145,6 +145,50 @@
         return out;
     }
 
+    function runTableScriptStage(input, stage) {
+        // Ensure 'g' flag is present to match all occurrences safely
+        let flags = stage.regex.flags;
+        if (!flags.includes('g')) flags += 'g';
+        const globalRegex = new RegExp(stage.regex.search, flags);
+
+        try {
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'columns', stage.script);
+            const matches = input.matchAll(globalRegex);
+            let outputValue = input;
+            let startStringIndex = 0;
+            let matchIndex = 0;
+
+            for (const match of matches) {
+                let matchString = match[0];
+                let originalString = match[0];
+                let groupIndex = 0;
+                let { rows, delimiter } = parseDelimited(originalString, stage.table.delimiter);
+                let columns = rows[0] || [];
+
+                for (const group of match) {
+                    if (groupIndex > 0 && group !== undefined) {
+                        let inputString = group;
+                        let result = fn(inputString, matchIndex, groupIndex, columns);
+                        // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
+                        matchString = matchString.replace(inputString, result);
+                    }
+                    groupIndex++;
+                }
+
+                let substringPreviousMatch = outputValue.substring(0, startStringIndex);
+                let substringCurrentMatch = outputValue.substring(startStringIndex);
+                substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString);
+                outputValue = substringPreviousMatch + substringCurrentMatch;
+
+                startStringIndex += matchString ? matchString.length : 0;
+                matchIndex++;
+            }
+            return outputValue;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     
     function runScriptStage(input, stage) {
         // Ensure 'g' flag is present to match all occurrences safely
@@ -214,12 +258,22 @@
                         processStr = serializeDelimited(stage.table.rows.slice(1), stage.table.delimiter);
                     }
 
-                    if (stage.processingMode === 'regex') {
-                        if (!stage.regex.search) { output = processStr; }
-                        else output = runRegexStage(processStr, stage.regex);
+                    if (stage.inputMode === 'text') {
+                        if (stage.processingMode === 'regex') {
+                            if (!stage.regex.search) { output = processStr; }
+                            else output = runRegexStage(processStr, stage.regex);
+                        } else {
+                            if (!stage.regex.search) { output = processStr; }
+                            else output = runScriptStage(processStr, stage);
+                        }
                     } else {
-                        if (!stage.regex.search) { output = processStr; }
-                        else output = runScriptStage(processStr, stage);
+                        if (stage.processingMode === 'regex') {
+                            if (!stage.regex.search) { output = processStr; }
+                            else output = runRegexStage(processStr, stage.regex);
+                        } else {
+                            if (!stage.regex.search) { output = processStr; }
+                            else output = runTableScriptStage(processStr, stage);
+                        }
                     }
 
                     output = headerPrefix + output; // stitch it back
@@ -435,7 +489,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, matchIndex, groupIndex</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
+        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, matchIndex, groupIndex, columns[] (when in table mode)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
       </div>
       `}
     </div>

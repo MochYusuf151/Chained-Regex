@@ -65,20 +65,31 @@
     /* ============================= State ============================= */
     const FLAGS = ['d', 'g', 'i', 'm', 's', 'u', 'v', 'y'];
 
-    function defaultStage(overrides) {
-        return Object.assign({
+    function defaultStage(overrides = {}) {
+        return {
             id: uid(),
             name: '',
             collapsed: false,
             inputMode: 'text',
             inputString: '',
             usePreviousOutput: true,
-            table: { rows: [['col1', 'col2'], ['', '']], delimiter: ',', hasHeader: true },
             processingMode: 'regex',
             regex: { search: '', flags: 'gm', substitute: '', replaceMode: '0', iteration: 1 },
             script: 'return inputString.toUpperCase();',
-            output: ''
-        }, overrides || {});
+            output: '',
+            ...overrides,
+            // Menangani table dan rows secara spesifik
+            table: {
+                rows: [['col1', 'col2'], ['', '']],
+                delimiter: ',',
+                hasHeader: true,
+                ...(overrides.table || {}),
+                // Memastikan rows punya fallback jika kosong/tidak ada
+                rows: (overrides.table && overrides.table.rows && overrides.table.rows.length > 0) 
+                    ? overrides.table.rows 
+                    : [['col1', 'col2'], ['', '']]
+            }
+        };
     }
 
     function defaultState() {
@@ -94,7 +105,16 @@
     /* ---- URL encode/decode ---- */
     function encodeState() {
         try {
-            const json = JSON.stringify(state);
+            const cleanedState = {
+                ...state,
+                stages: state.stages.map(({ inputString, output, _computedInput, table: { rows, ...tableRest }, ...rest }) => ({
+                    ...rest,
+                    table: tableRest
+                }))
+            };
+            console.log('Encoding state original:', state);
+            console.log('Encoding state cleaned:', cleanedState);
+            const json = JSON.stringify(cleanedState);
             return window.LZString ? LZString.compressToEncodedURIComponent(json) : encodeURIComponent(json);
         } catch (e) { return ''; }
     }
@@ -105,6 +125,7 @@
             const parsed = JSON.parse(json);
             if (!parsed || !Array.isArray(parsed.stages)) return null;
             parsed.stages = parsed.stages.map(s => defaultStage(s));
+            console.log('Decoded state:', parsed);
             return parsed;
         } catch (e) { return null; }
     }
@@ -441,12 +462,12 @@
         let html = '<table class="pipeline-table"><tbody>';
         html += '<tr><td class="rowhandle"></td>';
         for (let c = 0; c < colCount; c++) {
-            html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">✕</button></td>`;
+            html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
         }
         html += '</tr>';
         rows.forEach((row, r) => {
             const isHeaderRow = stage.table.hasHeader && r === 0;
-            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">✕</button></td>`;
+            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r} [❌️]</button></td>`;
             for (let c = 0; c < colCount; c++) {
                 const tag = isHeaderRow ? 'th' : 'td';
                 const val = row[c] != null ? row[c] : '';

@@ -173,7 +173,7 @@
             const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', stage.script);
             let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
             
-            let outputValue = ""
+            let outputValue = null;
             let matchIndex = 0;
             let rowIndex = 0;
 
@@ -207,7 +207,7 @@
                     matchIndex++;
                 }
                 
-                outputValue = outputValue + "\n" + outputRow;
+                outputValue = outputValue === null ? outputRow : outputValue + "\n" + outputRow;
                 rowIndex++;
             }
             return outputValue;

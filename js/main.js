@@ -440,6 +440,7 @@
         <button class="btn btn-ghost btn-sm" data-role="addRow">+ Row</button>
         <button class="btn btn-ghost btn-sm" data-role="addCol">+ Col</button>
         <button class="btn btn-ghost btn-sm" data-role="clearTable">Clear</button>
+        <button class="btn btn-ghost btn-sm" data-role="copyTable">Copy Table</button>
       </div>
       <div class="table-wrap" data-role="tableWrap" tabindex="0"></div>
       <div class="io-count" data-role="inputCount"></div>
@@ -676,6 +677,7 @@
         const addRowBtn = wrap.querySelector('[data-role="addRow"]');
         const addColBtn = wrap.querySelector('[data-role="addCol"]');
         const clearBtn = wrap.querySelector('[data-role="clearTable"]');
+        const copyBtn = wrap.querySelector('[data-role="copyTable"]');
 
         function importText(text) {
             const { rows, delimiter } = parseDelimited(text, stage.table.delimiter);
@@ -692,6 +694,13 @@
                 else showToast('Clipboard is empty');
             } catch (err) {
                 showToast('Clipboard access blocked — try pasting (Ctrl/Cmd+V) into the table instead');
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const tableString = serializeDelimited(stage.table.rows, stage.table.delimiter);
+            if (tableString) {
+                navigator.clipboard.writeText(tableString).then(() => showToast('Table copied'));
             }
         });
 

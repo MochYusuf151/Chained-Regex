@@ -82,7 +82,7 @@
             table: {
                 rows: [['col1', 'col2'], ['', '']],
                 delimiter: ',',
-                hasHeader: true,
+                hasHeader: false,
                 ...(overrides.table || {}),
                 // Memastikan rows punya fallback jika kosong/tidak ada
                 rows: (overrides.table && overrides.table.rows && overrides.table.rows.length > 0) 
@@ -465,7 +465,7 @@
         html += '</tr>';
         rows.forEach((row, r) => {
             const isHeaderRow = stage.table.hasHeader && r === 0;
-            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r} [❌️]</button></td>`;
+            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
             for (let c = 0; c < colCount; c++) {
                 const tag = isHeaderRow ? 'th' : 'td';
                 const val = row[c] != null ? row[c] : '';

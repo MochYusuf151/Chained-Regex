@@ -876,6 +876,12 @@
                 navigator.clipboard.writeText(window.location.href).then(() => showToast('Share link copied'));
             }, 320);
         });
+
+        document.getElementById('copyResultBtn').addEventListener('click', () => {
+            setTimeout(() => {
+                navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
+            }, 320);
+        });
     }
 
     let toastTimer;

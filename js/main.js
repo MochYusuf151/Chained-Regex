@@ -1,446 +1,377 @@
-$( document ).ready(function() {
-    scanFields();
+$(document).ready(function () {
+    // Inisialisasi event listener utama
+    $("#addRegexButton").on("click", () => addRegexCard());
+    $("#titleField, #descField").on("input", updateUrlState);
+
+    // Muat data dari URL atau buat pipeline default
+    loadFromUrlState();
 });
 
-const GROUP_ID_PREFIX = "regexGroup";
-var chainList = [];
-var searchParams;
+let pipelineSequence = 0;
 
-
-function scanFields() {
-    initGeneralCard();
-    scanRegexGroup();
-    initAddButton();
-    parseQueryParams();
-}
-
-function parseQueryParams() {
-    let url_string = window.location.href;
-    let url = new URL(url_string);
-    this.searchParams = url.searchParams;
-
-    let tempMetadata = {};
-    let tempGroup = {};
-    for (let param of searchParams) {
-        let type = param[0].replace(/^(.+)\d+/, "$1");
-        let groupId = param[0].replace(/.+(\d+)$/, "$1");
-        if (!tempGroup[groupId] && !isNaN(groupId)) {
-            tempGroup[groupId] = {};
-        }
-
-        switch (type) {
-
-            case "s":
-                tempGroup[groupId].search = param[1];
-                break;
-            
-            case "r":
-                tempGroup[groupId].replace = param[1];
-                break;
-            
-            case "c":
-                tempGroup[groupId].inputFromPreviousOutput = param[1];
-                break;
-
-            case "f":
-                tempGroup[groupId].flags = param[1];
-                break;
-        
-            case "m":
-                tempGroup[groupId].mode = param[1];
-                break;
-
-            case "i":
-                tempGroup[groupId].iteration = param[1];
-                break;
-            
-            case "sp":
-                tempGroup[groupId].scriptProcessor = param[1];
-                break;
-
-            case "title":
-                tempMetadata.regexTitle = param[1];
-                break;                
-
-            default:
-                break;
-        }
-    }
-
-    tempMetadata.regexTitle = tempMetadata.regexTitle ? tempMetadata.regexTitle : "";
-    $("#titleField").val(tempMetadata.regexTitle);
-    updateUrlTitle(tempMetadata.regexTitle);
+// ==========================================
+// PIPELINE MANAGEMENT
+// ==========================================
+function addRegexCard(data = null) {
+    let template = document.getElementById("pipelineTemplate").content.cloneNode(true);
+    let sequence = pipelineSequence++;
     
+    let $card = $(template.querySelector(".regex-group"));
+    $card.attr("id", `regexGroup-${sequence}`);
+    $card.attr("data-sequence", sequence);
+    $card.find(".seq-num").text(sequence + 1);
 
-    for (let groupId in tempGroup) {
-        let group = tempGroup[groupId]
-        if (groupId != "0" && groupId != "1") {
-            addRegexCard(null, parseInt(groupId));
-        }
-        $(".regex-group#regexGroup-" + groupId).each(function(i, obj) {
-            $(this).attr("flags-value", group.flags);
-            $(this).find('input.flag-button').each(function(i, obj) {
-                $(this).prop("checked", group.flags.includes($(this).attr("data-value")))
-            })
-
-            $(this).attr("replace-mode", group.mode);
-            $(this).find('input.replace-mode-radio').each(function(i, obj) {
-                $(this).prop("checked", group.mode == $(this).attr("data-value"))
-            })
-            
-            $(this).find(".search-regex-form").val(group.search);
-            $(this).find(".subtitute-regex-form").val(group.replace);
-            $(this).find(".script-processor-form").val(group.scriptProcessor);
-            $(this).find(".input-from-previous-output").prop('checked', !group.inputFromPreviousOutput ? true : group.inputFromPreviousOutput == "true");
-            $(this).find("input#iterate-regex").val(!group.iteration ? 1 : group.iteration);
-
-        })
-    }
-
-    
-    // console.log(tempGroup);
-}
-
-function initAddButton() {
-    $("#addRegexButton").on("click", addRegexCard)
-}
-
-function addRegexCard(event, newSequenceRequest) {
-    let containerRegex = $("#containerRegex");
-    let regexCard = $("#" + chainList[chainList.length - 1]);
-    let newSequence = parseInt(regexCard.attr("data-sequence")) + 1;
-    if (newSequenceRequest != null) {
-        newSequence = newSequenceRequest;
-    }
-    let newRegexCard = regexCard.clone();
-
-    
-    newRegexCard.attr("id", GROUP_ID_PREFIX + "-" + newSequence)    
-    newRegexCard.attr("data-sequence", newSequence)
-    newRegexCard.find(".card-title").text("Regex " + (newSequence + 1));
-
-    newRegexCard.find('input.replace-mode-radio').each(function(i, obj) {
-        $(this).attr("name", "replace-mode-" + newSequence);
-        let elementId = $(this).attr("id").replace(/-\d+/, "-" + newSequence);
-        $(this).attr("id", elementId);
-    })
-
-    newRegexCard.find('label.replace-mode-label').each(function(i, obj) {
-        let elementId = $(this).attr("for").replace(/-\d+/, "-" + newSequence);
-        $(this).attr("for", elementId);
-    })
-
-    newRegexCard.find('input.flag-button').each(function(i, obj) {
-        let elementId = $(this).attr("id").replace(/-\d+/, "-" + newSequence);
-        $(this).attr("id", elementId);
-    })
-
-    newRegexCard.find('label.flag-label').each(function(i, obj) {
-        let elementId = $(this).attr("for").replace(/-\d+/, "-" + newSequence);
-        $(this).attr("for", elementId);
-    })
-
-    containerRegex.append(newRegexCard);
-    chainList.push(newRegexCard.attr("id"));
-    chainList = [];
-    scanRegexGroup();
-}
-
-function initFlagButtons(parentGroupId, groupId) {
-    parentGroupId.find("#flagsGroup input.flag-button").each(function(i, obj) {
-        $(this).on("click", function() {
-            let checked = $(this).is(":checked");
-            let value = $(this).attr("data-value");
-            let groupValue = parentGroupId.attr("flags-value");
-            groupValue = groupValue.replace(value, "");
-            if (checked) {
-                groupValue += value;
-            }
-            parentGroupId.attr("flags-value", groupValue);
-
-            updateCurrentRegexGroup(groupId);
-        })
-    })
-}
-
-function initReplaceButtons(parentGroupId, groupId) {
-    parentGroupId.find('input.replace-mode-radio').each(function(i, obj) {
-        $(this).on("click", function() {
-            let checked = $(this).is(":checked");
-            let value = $(this).attr("data-value");
-            let groupValue = parentGroupId.attr("replace-mode");
-            groupValue = value;
-            
-            parentGroupId.attr("replace-mode", groupValue);
-
-            updateCurrentRegexGroup(groupId);
-        })
-    })
-    parentGroupId.find('input#iterate-regex').each(function(i, obj) {
-        $(this).on("input", function() {
-            updateCurrentRegexGroup(groupId);
-        })
-    })
-}
-
-function initCopyButtons(parentGroupId, groupId, outputField) {
-    parentGroupId.find('button#copy-button').each(function(i, obj) {
-        $(this).on("click", function() {
-            navigator.clipboard.writeText(outputField.val());
-        })
-    })
-}
-
-function initGeneralCard() {
-    $('#titleField').each(function(i, obj) {
-        $(this).on("input", function() {
-            let titleField = $("#titleField").val();
-            updateUrlTitle(titleField);
-        })
-    })
-}
-
-function scanRegexGroup() {
-    
-
-    $(".regex-group").each(function(i, obj) {
-        let groupId = $(this).attr('id');
-
-        // let groupSequence = groupId.replace(/.+(\d+)$/, "$1");
-        let groupSequence = $(this).attr('data-sequence');
-
-        // let nextGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupSequence) + 1);
-
-        chainList.push(groupId);
-        // console.log(groupId, groupSequence);
-        //test
-        let groupForm = $(this);
-        let searchField = $(this).find(".search-regex-form");
-        let inputField = $(this).find(".input-form");
-        let inputCheckboxField = $(this).find(".input-from-previous-output");
-        let subtituteField = $(this).find(".subtitute-regex-form");
-        let scriptProcessorField = $(this).find(".script-processor-form");
-        let outputField = $(this).find(".output-form");
-
-        if (inputCheckboxField.length > 0) {
-            checkInput(inputCheckboxField, groupSequence, inputField);
-            inputCheckboxField.on("change", function(e){
-                checkInput($(this), groupSequence, inputField);
-            })
-        }
-
-        inputField.off("input");
-        inputField.on("input", function(e) {
-            updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField, scriptProcessorField);
-            // updateRegexGroup(nextGroupId);
-            updateNextRegexGroup(groupId);
-        })
-
-        searchField.off("input");
-        searchField.on("input", function(e) {
-            // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            // updateRegexGroup(nextGroupId);
-            // updateNextRegexGroup(groupId);
-            updateCurrentRegexGroup(groupId);
-        })
-
-        subtituteField.off("input");
-        subtituteField.on("input", function(e) {
-            // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            // updateRegexGroup(nextGroupId);
-            // updateNextRegexGroup(groupId);
-            updateCurrentRegexGroup(groupId);
-        })
-
-        inputCheckboxField.on("click", function(e) {
-            // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            // updateRegexGroup(nextGroupId);
-            // updateNextRegexGroup(groupId);
-            updateCurrentRegexGroup(groupId);
-        })
-
-        scriptProcessorField.off("input");
-        scriptProcessorField.on("input", function(e) {
-            // updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField);
-            // updateRegexGroup(nextGroupId);
-            // updateNextRegexGroup(groupId);
-            updateCurrentRegexGroup(groupId);
-        })
-
-        initFlagButtons($(this), groupId);
-
-        initReplaceButtons($(this), groupId);
-
-        initCopyButtons($(this), groupId, outputField);
+    // Scope Radio Buttons agar unik per card
+    let radioName = `replace-mode-${sequence}`;
+    $card.find(".replace-mode-radio").each((i, el) => {
+        let id = `mode-${sequence}-${i}`;
+        $(el).attr("name", radioName).attr("id", id);
+        $(el).next("label").attr("for", id);
     });
 
-    // Copy from last output
-    $('button#copy-last-button').each(function(i, obj) {
-        $(this).on("click", function() {
-            let lastOutputField = $("#regexGroup-" + (chainList.length - 1) + " .output-form").val();
-            navigator.clipboard.writeText(lastOutputField);
-        })
-    })
+    // Scope Checkbox Flags
+    $card.find(".flag-btn").each((i, el) => {
+        let id = `flag-${sequence}-${i}`;
+        $(el).attr("id", id);
+        $(el).next("label").attr("for", id);
+    });
+
+    // Sembunyikan switch 'Previous Output' untuk pipeline pertama
+    if (sequence === 0) {
+        $card.find(".prev-output-switch").hide();
+        $card.find(".input-from-previous-output").prop("checked", false);
+    }
+
+    $("#containerRegex").append($card);
+    let $newCard = $(`#regexGroup-${sequence}`);
+
+    // Terapkan data jika me-load dari State
+    if (data) {
+        applyDataToCard($newCard, data);
+    } else {
+        updateUrlState(); // Simpan state default ke URL
+    }
+
+    initCardEvents($newCard, sequence);
+    triggerPipelineCascade(sequence);
 }
 
-function updateRegexGroup(regexGroupId) {
-    let regexGroup = $("#" + regexGroupId);
-    if (regexGroup.length == 0)
-        return;
-    regexGroup.find(".input-form").trigger("input");
+function initCardEvents($card, sequence) {
+    // 1. Semua perubahan pada form -> trigger kalkulasi & update URL
+    $card.find(".state-trigger").on("input change", function () {
+        triggerPipelineCascade(sequence);
+        updateUrlState();
+    });
+
+    // 2. Hapus Pipeline
+    $card.find(".btn-remove").on("click", function () {
+        if ($(".regex-group").length > 1) {
+            $card.remove();
+            recalculateSequences();
+            triggerPipelineCascade(0);
+            updateUrlState();
+        } else {
+            alert("Minimal harus ada 1 pipeline.");
+        }
+    });
+
+    // 3. Table View Toggle
+    $card.find(".btn-toggle-table").on("click", function () {
+        let $textarea = $card.find(".input-form");
+        let $tableContainer = $card.find(".table-view-container");
+        
+        if ($textarea.is(":visible")) {
+            // Switch to Table Mode
+            $textarea.hide();
+            $tableContainer.html(csvToHtmlTable($textarea.val())).fadeIn(200);
+            $(this).addClass("active btn-primary").removeClass("btn-secondary");
+        } else {
+            // Switch to Text Mode
+            $tableContainer.hide();
+            $textarea.fadeIn(200);
+            $(this).removeClass("active btn-primary").addClass("btn-secondary");
+        }
+    });
+
+    // 4. Paste CSV from Clipboard -> Auto Format & Set Input
+    $card.find(".btn-paste-csv").on("click", async function () {
+        try {
+            const text = await navigator.clipboard.readText();
+            let $textarea = $card.find(".input-form");
+            
+            // Uncheck "From previous output" jika user manual paste
+            $card.find(".input-from-previous-output").prop("checked", false);
+            $textarea.prop('readonly', false);
+            
+            $textarea.val(text);
+            
+            // Auto open table view
+            let $tableContainer = $card.find(".table-view-container");
+            $textarea.hide();
+            $tableContainer.html(csvToHtmlTable(text)).show();
+            $card.find(".btn-toggle-table").addClass("active btn-primary").removeClass("btn-secondary");
+
+            triggerPipelineCascade(sequence);
+            updateUrlState();
+        } catch (err) {
+            alert("Failed to read clipboard! (Check browser permissions)");
+            console.error(err);
+        }
+    });
+
+    // 5. Copy Output
+    $card.find(".btn-copy").on("click", function () {
+        let val = $card.find(".output-form").val();
+        navigator.clipboard.writeText(val).then(() => {
+            let $icon = $(this).find("i");
+            $icon.removeClass("bi-copy").addClass("bi-check2 text-success");
+            setTimeout(() => $icon.removeClass("bi-check2 text-success").addClass("bi-copy"), 2000);
+        });
+    });
 }
 
-function updateCurrentRegexGroup(currentGroupId) {
-    let currentIndex = chainList.findIndex(x => x === currentGroupId);
-    let regexGroup = $("#" + chainList[currentIndex]);
-    if (regexGroup.length == 0)
-        return;
-    regexGroup.find(".input-form").trigger("input");
+function recalculateSequences() {
+    $(".regex-group").each(function (index) {
+        $(this).find(".seq-num").text(index + 1);
+        if(index === 0) {
+            $(this).find(".prev-output-switch").hide();
+            $(this).find(".input-from-previous-output").prop("checked", false);
+        } else {
+            $(this).find(".prev-output-switch").show();
+        }
+    });
 }
 
-function updateNextRegexGroup(currentGroupId) {
-    // console.log("current id", currentGroupId);
-    let currentIndex = chainList.findIndex(x => x === currentGroupId);
-    if (currentIndex + 1 >= chainList.length)
-        return;
-    let regexGroup = $("#" + chainList[currentIndex + 1]);
-    // console.log("next group", regexGroup.attr("data-sequence"))
-    if (regexGroup.length == 0)
-        return;
-    regexGroup.find(".input-form").trigger("input");
-}
 
-function updateSearchRegex(groupSequence, groupForm, searchField, inputField, subtituteField, outputField, inputCheckboxField, scriptProcessorField) {
-    try {
-        let flags = groupForm.attr("flags-value");
-        let replaceMode = groupForm.attr("replace-mode");
-        let iterateCount = parseInt(groupForm.find("input#iterate-regex").val());
-        let srcRegex = new RegExp(searchField.val(), flags);
-        let subtitute = subtituteField.val().replaceAll("\"", "\\\"");
-        subtitute = JSON.parse(`{ "text": "${subtitute}" }`).text;
-        let inputInfo = groupForm.find(".input-info small");
-        let outputInfo = groupForm.find(".output-info small");
-        let scriptProcessor = scriptProcessorField.val();
-
-        if (inputField.val() != null) { 
-            let inputCharCount = inputField.val().length;
-            let inputLineCount = inputField.val().split("\n").length;
-            inputInfo.html(`${inputLineCount} Lines | ${inputCharCount} character`)
+// ==========================================
+// REGEX ENGINE & CASCADING LOGIC
+// ==========================================
+function triggerPipelineCascade(startIndex) {
+    let cards = $(".regex-group").toArray();
+    
+    for (let i = startIndex; i < cards.length; i++) {
+        let $card = $(cards[i]);
+        let $input = $card.find(".input-form");
+        let usePrev = $card.find(".input-from-previous-output").is(":checked");
+        
+        // Handling inputString
+        if (usePrev && i > 0) {
+            let prevOutput = $(cards[i - 1]).find(".output-form").val();
+            $input.val(prevOutput);
+            $input.prop('readonly', true);
+        } else {
+            $input.prop('readonly', false);
         }
 
-        let checked = inputCheckboxField.is(':checked');
-        if (checked) {
-            inputField.val(getPreviousOutput(groupSequence));
+        updateStats($input, $card.find(".input-info small"));
+
+        // Extraction data modeRegex & js processing
+        let rawInput = $input.val() || "";
+        let searchRegexStr = $card.find(".search-regex-form").val();
+        let substituteStr = $card.find(".subtitute-regex-form").val() || "";
+        let iterate = parseInt($card.find(".iterate-regex-form").val()) || 1;
+        let replaceMode = $card.find(".replace-mode-radio:checked").attr("data-value");
+        let scriptProc = $card.find(".script-processor-form").val();
+        
+        // Compile Flags
+        let flags = "";
+        $card.find(".flag-btn:checked").each((_, el) => { flags += $(el).attr("data-value"); });
+
+        let $output = $card.find(".output-form");
+
+        // Execution
+        try {
+            if (!searchRegexStr) {
+                $output.val(rawInput); // Bypass if empty regex
+            } else {
+                let srcRegex = new RegExp(searchRegexStr, flags);
+                // Unescape Substitute String handling
+                let subParsed = substituteStr.replace(/\\n/g, "\n").replace(/\\t/g, "\t"); 
+                
+                let result = processRegex(rawInput, srcRegex, subParsed, replaceMode, iterate, scriptProc);
+                $output.val(result);
+            }
+        } catch (err) {
+            $output.val("Error Processing Regex:\n" + err.message);
         }
         
-        updateUrl(groupSequence, searchField.val(), subtituteField.val(), checked, flags, replaceMode, iterateCount, scriptProcessorField.val());
-        // let regexOutput = inputField.val() ? inputField.val().replace(srcRegex, subtitute) : inputField.val();
-        let regexOutput = inputField.val() ? processRegex(inputField.val(), srcRegex, subtitute, replaceMode, iterateCount, scriptProcessor) : inputField.val();
-        outputField.val(regexOutput);
-
-        if (regexOutput != null) { 
-            let outputCharCount = regexOutput.length;
-            let outputLineCount = regexOutput.split("\n").length;
-            outputInfo.html(`${outputLineCount} Lines | ${outputCharCount} character`)
+        updateStats($output, $card.find(".output-info small"));
+        
+        // Sinkronisasi Tabel jika aktif
+        if ($card.find(".btn-toggle-table").hasClass("active")) {
+             $card.find(".table-view-container").html(csvToHtmlTable($input.val()));
         }
-
-    } catch (err) {
-        outputField.val("Error!")
-        console.error(err.message);
     }
 }
-
-function updateUrl(groupSequence, searchValue, subtituteValue, inputFromPreviousOutput, flags, replaceMode, iteration, scriptProcessor){
-    this.searchParams.set("s" + groupSequence, searchValue);
-    this.searchParams.set("r" + groupSequence, subtituteValue);
-    if (inputFromPreviousOutput != null)
-        this.searchParams.set("c" + groupSequence, inputFromPreviousOutput);
-    this.searchParams.set("f" + groupSequence, flags);
-    this.searchParams.set("m" + groupSequence, replaceMode);
-    this.searchParams.set("i" + groupSequence, iteration);
-    this.searchParams.set("sp" + groupSequence, scriptProcessor);
-
-    var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
-    history.pushState({}, '', newurl)
- }
-
- function updateUrlTitle(pageTitle){
-    this.searchParams.set("title", pageTitle);
-
-    document.title = pageTitle ? pageTitle + " | Chained Regex" : "Chained Regex";
-
-    var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + this.searchParams.toString();
-    history.pushState({}, '', newurl)
- }
 
 function processRegex(inputValue, searchRegex, subtituteValue, replaceMode, iteration, scriptProcessor) {
-    let outputValue;
+    let outputValue = inputValue;
+    
     if (scriptProcessor) {
-        inputValue = processScript(inputValue, searchRegex, scriptProcessor);
+        outputValue = processScript(outputValue, searchRegex, scriptProcessor);
     }
+
     for (let i = 0; i < iteration; i++) {
-        if (replaceMode == "0") {
-            outputValue = inputValue.replace(searchRegex, subtituteValue);
-        } else {
+        if (replaceMode === "0") { // Subtitute
+            outputValue = outputValue.replace(searchRegex, subtituteValue);
+        } else { // List Matched
             let replaceValue = "";
-            const matches = inputValue.matchAll(searchRegex);
+            const matches = outputValue.matchAll(searchRegex);
             for (const match of matches) {
-                replaceValue += match[0].replace(searchRegex, subtituteValue);
+                replaceValue += match[0].replace(searchRegex, subtituteValue) + "\n";
             }
-            outputValue = replaceValue;
+            outputValue = replaceValue.trimEnd();
         }
-        inputValue = outputValue;
     }
     return outputValue;
 }
-
 
 function processScript(inputValue, searchRegex, scriptProcessor) {
-    const matches = inputValue.matchAll(searchRegex);
-    let outputValue = inputValue;
-    let matchIndex = 0;
-    let startStringIndex = 0;
-    let endStringIndex = 0;
-    for (const match of matches) {
-        let matchString = match[0];
-        let originalString = match[0];
-        let matchStartIndex = match.index;
-        let i = 0;
-        let groupIndex = 0;
-        for (const group of match) {
-            if (i++ == 0)
-                continue;
-            let inputString = group;
-            matchString = matchString.replace(inputString, eval(scriptProcessor));
-            groupIndex++;
-        }
-        // outputValue += matchString;
-
-        let substringPreviousMatch = outputValue.substring(0, startStringIndex);
-        let substringCurrentMatch = outputValue.substring(startStringIndex);
-        substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString)
-        outputValue = substringPreviousMatch + substringCurrentMatch;
-
-        startStringIndex += matchString ? matchString.length : 0;
-
-        matchIndex++;
-    }
-    return outputValue;
-}
-
-function getPreviousOutput(groupSequence) {
-    let prevGroupId = GROUP_ID_PREFIX + "-" + (parseInt(groupSequence) - 1);
-    let prevRegexGroup = $("#" + prevGroupId);
-    let outputField = prevRegexGroup.find(".output-form");
-    return outputField.val();
-}
-
-function checkInput(checkbox, groupSequence, inputField) {
-    let checked = checkbox.is(':checked');
-    if (checked) {
-        inputField.prop('readonly', true);
-    } else {
-        inputField.prop('readonly', false);
-    }
+    try {
+        const matches = inputValue.matchAll(searchRegex);
+        let outputValue = inputValue;
+        let startStringIndex = 0;
+        let matchIndex = 0;
+        
+        for (const match of matches) {
+            let matchString = match[0];
+            let originalString = match[0];
             
+            let groupIndex = 0;
+            for (const group of match) {
+                if (groupIndex > 0) { // Lewati full match, fokus pada group
+                    let inputString = group; 
+                    // WARNING: eval digunakan seperti pada arsitektur lama
+                    let result = eval(scriptProcessor);
+                    matchString = matchString.replace(inputString, result);
+                }
+                groupIndex++;
+            }
+            
+            let substringPreviousMatch = outputValue.substring(0, startStringIndex);
+            let substringCurrentMatch = outputValue.substring(startStringIndex);
+            substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString);
+            outputValue = substringPreviousMatch + substringCurrentMatch;
+            
+            startStringIndex += matchString ? matchString.length : 0;
+            matchIndex++;
+        }
+        return outputValue;
+    } catch(err) {
+        console.warn("JS Processing Error:", err);
+        return inputValue; // Kembalikan default apabila script gagal
+    }
+}
+
+function updateStats($field, $label) {
+    let val = $field.val() || "";
+    let lines = val ? val.split("\n").length : 0;
+    let chars = val.length;
+    $label.html(`${lines} Lines | ${chars} Characters`);
+}
+
+
+// ==========================================
+// URL STATE MANAGEMENT (JSON Base64)
+// ==========================================
+function updateUrlState() {
+    let state = {
+        title: $("#titleField").val(),
+        desc: $("#descField").val(),
+        pipelines: []
+    };
+
+    document.title = state.title ? state.title + " | Chained Regex" : "Chained Regex";
+
+    $(".regex-group").each(function () {
+        let $c = $(this);
+        
+        let flags = "";
+        $c.find(".flag-btn:checked").each((_, el) => { flags += $(el).attr("data-value"); });
+        
+        state.pipelines.push({
+            in: $c.find(".input-form").val(),
+            usePrev: $c.find(".input-from-previous-output").is(":checked"),
+            regex: $c.find(".search-regex-form").val(),
+            flags: flags,
+            sub: $c.find(".subtitute-regex-form").val(),
+            iter: $c.find(".iterate-regex-form").val(),
+            mode: $c.find(".replace-mode-radio:checked").attr("data-value"),
+            js: $c.find(".script-processor-form").val()
+        });
+    });
+
+    // Enkripsi State ke format URL aman
+    let base64State = btoa(encodeURIComponent(JSON.stringify(state)));
+    
+    const url = new URL(window.location);
+    url.searchParams.set("state", base64State);
+    history.replaceState(null, '', url);
+}
+
+function loadFromUrlState() {
+    const url = new URL(window.location);
+    const stateParam = url.searchParams.get("state");
+
+    if (stateParam) {
+        try {
+            let state = JSON.parse(decodeURIComponent(atob(stateParam)));
+            $("#titleField").val(state.title || "");
+            $("#descField").val(state.desc || "");
+            document.title = state.title ? state.title + " | Chained Regex" : "Chained Regex";
+
+            state.pipelines.forEach(pipe => { addRegexCard(pipe); });
+            triggerPipelineCascade(0);
+            return;
+        } catch (e) {
+            console.error("Gagal membaca URL state:", e);
+        }
+    }
+    
+    // Default 2 Pipeline jika tidak ada state valid
+    addRegexCard();
+    addRegexCard();
+}
+
+function applyDataToCard($card, data) {
+    $card.find(".input-form").val(data.in || "");
+    $card.find(".input-from-previous-output").prop("checked", data.usePrev);
+    $card.find(".search-regex-form").val(data.regex || "");
+    $card.find(".subtitute-regex-form").val(data.sub || "");
+    $card.find(".iterate-regex-form").val(data.iter || 1);
+    $card.find(".script-processor-form").val(data.js || "");
+    
+    // Radio Replace Mode
+    $card.find(`.replace-mode-radio[data-value="${data.mode}"]`).prop("checked", true);
+    
+    // Checkbox Flags
+    let flags = data.flags || "";
+    $card.find(".flag-btn").each((_, el) => {
+        $(el).prop("checked", flags.includes($(el).attr("data-value")));
+    });
+}
+
+
+// ==========================================
+// UTILITIES
+// ==========================================
+function csvToHtmlTable(csvText) {
+    if (!csvText) return "<p class='text-muted small m-2'>No data to format</p>";
+    
+    // Deteksi separator (Tab untuk Excel, Comma untuk murni CSV)
+    const separator = csvText.indexOf('\t') !== -1 ? '\t' : ',';
+    const rows = csvText.split('\n');
+    
+    let html = '<table class="table table-dark table-sm table-bordered m-0 text-nowrap">';
+    rows.forEach((row, i) => {
+        if (!row.trim() && i === rows.length - 1) return; // Skip baris kosong di akhir
+        html += '<tr>';
+        const cols = row.split(separator);
+        cols.forEach(col => {
+            html += `<td>${col || '&nbsp;'}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</table>';
+    return html;
 }

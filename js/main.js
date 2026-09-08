@@ -170,36 +170,45 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'columns', stage.script);
-            const matches = input.matchAll(globalRegex);
-            let outputValue = input;
-            let startStringIndex = 0;
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', stage.script);
+            let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
+            
+            let outputValue = ""
             let matchIndex = 0;
+            let rowIndex = 0;
 
-            for (const match of matches) {
-                let matchString = match[0];
-                let originalString = match[0];
-                let groupIndex = 0;
-                let { rows, delimiter } = parseDelimited(originalString, stage.table.delimiter);
-                let columns = rows[0] || [];
+            for (const row of rows) {
+                let outputRow = row.join(stage.table.delimiter);
+                let startStringIndex = 0;
+                const matches = outputRow.matchAll(globalRegex);
+                for (const match of matches) {
+                    let matchString = match[0];
+                    let originalString = match[0];
+                    let groupIndex = 0;
+                    let columns = row || [];
 
-                for (const group of match) {
-                    if (groupIndex > 0 && group !== undefined) {
-                        let inputString = group;
-                        let result = fn(inputString, matchIndex, groupIndex, columns);
-                        // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
-                        matchString = matchString.replace(inputString, result);
+                    for (const group of match) {
+                        if (groupIndex > 0 && group !== undefined) {
+                            let inputString = group;
+                            let result = fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table);
+                            // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
+                            matchString = matchString.replace(inputString, result);
+                        }
+                        groupIndex++;
                     }
-                    groupIndex++;
+
+                    let substringPreviousMatch = outputRow.substring(0, startStringIndex);
+                    let substringCurrentMatch = outputRow.substring(startStringIndex);
+                    substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString);
+                    outputRow = substringPreviousMatch + substringCurrentMatch;
+
+                    startStringIndex += matchString ? matchString.length : 0;
+
+                    matchIndex++;
                 }
-
-                let substringPreviousMatch = outputValue.substring(0, startStringIndex);
-                let substringCurrentMatch = outputValue.substring(startStringIndex);
-                substringCurrentMatch = substringCurrentMatch.replace(originalString, matchString);
-                outputValue = substringPreviousMatch + substringCurrentMatch;
-
-                startStringIndex += matchString ? matchString.length : 0;
-                matchIndex++;
+                
+                outputValue = outputValue + "\n" + outputRow;
+                rowIndex++;
             }
             return outputValue;
         } catch (err) {
@@ -508,7 +517,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, matchIndex, groupIndex, columns[] (when in table mode)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
+        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, matchIndex, groupIndex, rowIndex (table), columns[] (table), table (table)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
       </div>
       `}
     </div>

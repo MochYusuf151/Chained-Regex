@@ -3,6 +3,7 @@
 
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
+    let globalVar = {};
     function uid() { uidCounter += 1; return 's' + Date.now().toString(36) + uidCounter.toString(36); }
     function debounce(fn, wait) {
         let t;
@@ -75,7 +76,7 @@
             usePreviousOutput: true,
             processingMode: 'regex',
             regex: { search: '', flags: 'gm', substitute: '', replaceMode: '0', iteration: 1 },
-            script: 'return inputString.toUpperCase();',
+            script: 'return inputString;',
             output: '',
             ...overrides,
             // Menangani table dan rows secara spesifik
@@ -170,7 +171,7 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', stage.script);
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', stage.script);
             let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
             
             let outputValue = null;
@@ -190,7 +191,7 @@
                     for (const group of match) {
                         if (groupIndex > 0 && group !== undefined) {
                             let inputString = group;
-                            let result = fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table);
+                            let result = fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar);
                             // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                             matchString = matchString.replace(inputString, result);
                         }
@@ -224,7 +225,7 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matchIndex', 'groupIndex', stage.script);
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'globalVar', stage.script);
             const matches = input.matchAll(globalRegex);
             let outputValue = input;
             let startStringIndex = 0;
@@ -238,7 +239,7 @@
                 for (const group of match) {
                     if (groupIndex > 0 && group !== undefined) {
                         let inputString = group;
-                        let result = fn(inputString, matchIndex, groupIndex);
+                        let result = fn(inputString, matchIndex, groupIndex, globalVar);
                         // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                         matchString = matchString.replace(inputString, result);
                     }
@@ -261,15 +262,25 @@
 
     function computeAll() {
         let prevOutput = '';
+        
         state.stages.forEach((stage, idx) => {
-            const source = (idx > 0 && stage.usePreviousOutput) ? prevOutput
+            const isUsingPrev = (idx > 0 && stage.usePreviousOutput);
+            
+            const source = isUsingPrev ? prevOutput
                 : (stage.inputMode === 'table' ? serializeDelimited(stage.table.rows, stage.table.delimiter) : stage.inputString);
 
-            // Store calculated input string to be visually binded 
             stage._computedInput = source;
 
-            if (stage.inputMode === 'table' && !(idx > 0 && stage.usePreviousOutput)) {
-                stage.inputString = source;
+            if (isUsingPrev) {
+                if (stage.inputMode === 'table') {
+                    const parsed = parseDelimited(source, stage.table.delimiter);
+                    stage.table.rows = parsed.rows;
+                    const wrap = document.querySelector(`.stage-wrap[data-stage-id="${stage.id}"]`);
+                    renderTable(wrap, stage);
+                    bindInputAreaEvents(wrap, stage);
+                } else {
+                    stage.inputString = source;
+                }
             }
 
             let error = null, output = '';
@@ -280,7 +291,7 @@
                     let headerPrefix = '';
                     let processStr = source;
 
-                    if (stage.inputMode === 'table' && stage.table.hasHeader && stage.table.rows.length > 0 && !(idx > 0 && stage.usePreviousOutput)) {
+                    if (stage.inputMode === 'table' && stage.table.hasHeader && stage.table.rows.length > 0) {
                         headerPrefix = serializeDelimited([stage.table.rows[0]], stage.table.delimiter) + '\n';
                         processStr = serializeDelimited(stage.table.rows.slice(1), stage.table.delimiter);
                     }
@@ -303,16 +314,18 @@
                         }
                     }
 
-                    output = headerPrefix + output; // stitch it back
+                    output = headerPrefix + output;
                 }
             } catch (err) {
                 error = err.message;
                 output = '';
             }
+            
             stage.output = output;
             stage.error = error;
             prevOutput = output;
         });
+        
         persistToUrl();
     }
 
@@ -517,7 +530,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, matchIndex, groupIndex, rowIndex (table), columns[] (table), table (table)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
+        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, globalVar, matchIndex, groupIndex, rowIndex (table), columns[] (table), table (table)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
       </div>
       `}
     </div>
@@ -619,12 +632,12 @@
             stage.inputMode = btn.dataset.value;
             wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b === btn));
 
-            // mark modif
-            if (stage.inputMode === 'table' && stage.usePreviousOutput) {
-                stage.usePreviousOutput = false;
-                const usePrevCb = wrap.querySelector('[data-role="usePrev"]');
-                if (usePrevCb) usePrevCb.checked = false;
-            }
+            // // mark modif
+            // if (stage.inputMode === 'table' && stage.usePreviousOutput) {
+            //     stage.usePreviousOutput = false;
+            //     const usePrevCb = wrap.querySelector('[data-role="usePrev"]');
+            //     if (usePrevCb) usePrevCb.checked = false;
+            // }
 
             renderInputArea(wrap, stage);
             bindInputAreaEvents(wrap, stage);
@@ -861,7 +874,6 @@
                 cell.addEventListener('click', (e) => {
                     const r = parseInt(cell.dataset.row, 10);
                     const c = parseInt(cell.dataset.col, 10);
-
                     // Tentukan rentang seleksi (minR, maxR, minC, maxC)
                     if (e.shiftKey && stage.table.selectionStart) {
                         stage.table.selectionRange = {

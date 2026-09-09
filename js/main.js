@@ -4,6 +4,11 @@
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
     let globalVar = {};
+    let fnUtils = {
+        transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
+        stringifyTable: (rows, delimiter) => rows.map(r => r.join(delimiter)).join('\n'),
+        help: `Available utility functions: transpose(table.rows), stringifyTable(table.rows, delimiter)`
+    };
     function uid() { uidCounter += 1; return 's' + Date.now().toString(36) + uidCounter.toString(36); }
     function debounce(fn, wait) {
         let t;
@@ -171,12 +176,17 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', stage.script);
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', 'fnUtils', stage.script);
             let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
             
             let outputValue = null;
             let matchIndex = 0;
             let rowIndex = 0;
+
+            if (!stage.regex.search) {
+                let result = fn(input, null, null, null, null, stage.table, globalVar, fnUtils);
+                return result === undefined ? input : result;
+            }
 
             for (const row of rows) {
                 let outputRow = row.join(stage.table.delimiter);
@@ -191,7 +201,7 @@
                     for (const group of match) {
                         if (groupIndex > 0 && group !== undefined) {
                             let inputString = group;
-                            let result = fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar);
+                            let result = fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, fnUtils);
                             // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                             matchString = matchString.replace(inputString, result);
                         }
@@ -211,6 +221,7 @@
                 outputValue = outputValue === null ? outputRow : outputValue + "\n" + outputRow;
                 rowIndex++;
             }
+
             return outputValue;
         } catch (err) {
             throw err;
@@ -225,11 +236,16 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'globalVar', stage.script);
+            const fn = new Function('inputString', 'matchIndex', 'groupIndex', 'globalVar', 'fnUtils', stage.script);
             const matches = input.matchAll(globalRegex);
             let outputValue = input;
             let startStringIndex = 0;
             let matchIndex = 0;
+
+            if (!stage.regex.search) {
+                let result = fn(input, null, null, null, null, stage.table, globalVar, fnUtils);
+                return result === undefined ? input : result;
+            }
 
             for (const match of matches) {
                 let matchString = match[0];
@@ -239,7 +255,7 @@
                 for (const group of match) {
                     if (groupIndex > 0 && group !== undefined) {
                         let inputString = group;
-                        let result = fn(inputString, matchIndex, groupIndex, globalVar);
+                        let result = fn(inputString, matchIndex, groupIndex, globalVar, fnUtils);
                         // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                         matchString = matchString.replace(inputString, result);
                     }
@@ -301,16 +317,14 @@
                             if (!stage.regex.search) { output = processStr; }
                             else output = runRegexStage(processStr, stage.regex);
                         } else {
-                            if (!stage.regex.search) { output = processStr; }
-                            else output = runScriptStage(processStr, stage);
+                            output = runScriptStage(processStr, stage);
                         }
                     } else {
                         if (stage.processingMode === 'regex') {
                             if (!stage.regex.search) { output = processStr; }
                             else output = runRegexStage(processStr, stage.regex);
                         } else {
-                            if (!stage.regex.search) { output = processStr; }
-                            else output = runTableScriptStage(processStr, stage);
+                            output = runTableScriptStage(processStr, stage);
                         }
                     }
 
@@ -530,7 +544,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function vars: <b>inputString, globalVar, matchIndex, groupIndex, rowIndex (table), columns[] (table), table (table)</b>.<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
+        <div class="script-hint" style="margin-top:8px;">Function Vars: <b>inputString, globalVar, matchIndex, groupIndex.<br>Table vars: rowIndex, columns[], table</b>.<br>Function Utils: fnUtils (type 'return fnUtils.help' for help).<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern.</div>
       </div>
       `}
     </div>
@@ -842,6 +856,24 @@
                     
                     // Parse data clipboard menjadi array 2D
                     const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
+
+                    if (pastedRows.length === 1 && pastedRows[0].length === 1) {
+                        e.preventDefault(); // Tetap cegah HTML berantakan masuk
+                        
+                        const val = pastedRows[0][0]; // Ambil nilai bersih (tanpa trailing newline excel)
+                        const selection = window.getSelection();
+                        
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            range.deleteContents(); // Hapus teks yang mungkin sedang di-blok/highlight di dalam cell
+                            range.insertNode(document.createTextNode(val)); // Sisipkan teks di kursor
+                            range.collapse(false); // Pindahkan kursor ke akhir teks yang di-paste
+                            
+                            // Picu event input secara manual agar state `stage.table.rows` langsung tersimpan
+                            cell.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        return; // Hentikan fungsi di sini, jangan jalankan multi-cell paste di bawah
+                    }
 
                     // Timpa baris dan kolom dimulai dari cell yang dipilih (r0, c0)
                     pastedRows.forEach((row, ri) => {

@@ -507,7 +507,7 @@
             for (let c = 0; c < colCount; c++) {
                 const tag = isHeaderRow ? 'th' : 'td';
                 const val = row[c] != null ? row[c] : '';
-                html += `<${tag} class="cell" contenteditable="true" data-row="${r}" data-col="${c}">${escapeHtml(val)}</${tag}>`;
+                html += `<${tag} class="cell" contenteditable="${stage.id != state.stages[0]?.id && stage.usePreviousOutput ? 'false' : 'true'}" data-row="${r}" data-col="${c}">${escapeHtml(val)}</${tag}>`;
             }
             html += '</tr>';
         });
@@ -648,7 +648,6 @@
             stage.inputMode = btn.dataset.value;
             wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b === btn));
 
-            // // mark modif
             // if (stage.inputMode === 'table' && stage.usePreviousOutput) {
             //     stage.usePreviousOutput = false;
             //     const usePrevCb = wrap.querySelector('[data-role="usePrev"]');
@@ -665,10 +664,10 @@
             usePrev.addEventListener('change', (e) => {
                 stage.usePreviousOutput = e.target.checked;
 
-                if (stage.usePreviousOutput && stage.inputMode === 'table') {
-                    stage.inputMode = 'text';
-                    wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b.dataset.value === 'text'));
-                }
+                // if (stage.usePreviousOutput && stage.inputMode === 'table') {
+                //     stage.inputMode = 'text';
+                //     wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b.dataset.value === 'text'));
+                // }
 
                 renderInputArea(wrap, stage);
                 bindInputAreaEvents(wrap, stage);

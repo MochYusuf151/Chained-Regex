@@ -619,6 +619,7 @@
             stage.inputMode = btn.dataset.value;
             wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b === btn));
 
+            // mark modif
             if (stage.inputMode === 'table' && stage.usePreviousOutput) {
                 stage.usePreviousOutput = false;
                 const usePrevCb = wrap.querySelector('[data-role="usePrev"]');
@@ -785,20 +786,43 @@
 
                 cell.addEventListener('paste', (e) => {
                     e.stopPropagation();
+                    e.preventDefault(); // Pindahkan ke luar agar selalu mencegah browser paste HTML berantakan ke dalam cell
+
                     const text = (e.clipboardData || window.clipboardData).getData('text');
-                    if (text && (text.includes('\t') || text.includes('\n') || text.includes(','))) {
-                        e.preventDefault();
-                        const r0 = parseInt(cell.dataset.row, 10), c0 = parseInt(cell.dataset.col, 10);
-                        const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
-                        pastedRows.forEach((row, ri) => {
-                            row.forEach((val, ci) => {
-                                const rr = r0 + ri, cc = c0 + ci;
-                                if (!stage.table.rows[rr]) stage.table.rows[rr] = [];
-                                stage.table.rows[rr][cc] = val;
-                            });
+                    if (!text) return;
+
+                    const r0 = parseInt(cell.dataset.row, 10);
+                    const c0 = parseInt(cell.dataset.col, 10);
+                    
+                    // Parse data clipboard menjadi array 2D
+                    const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
+
+                    // Timpa baris dan kolom dimulai dari cell yang dipilih (r0, c0)
+                    pastedRows.forEach((row, ri) => {
+                        row.forEach((val, ci) => {
+                            const rr = r0 + ri;
+                            const cc = c0 + ci;
+                            
+                            // Buat baris baru jika paste melebihi baris tabel saat ini
+                            if (!stage.table.rows[rr]) {
+                                stage.table.rows[rr] = [];
+                            }
+                            stage.table.rows[rr][cc] = val;
                         });
-                        renderTable(wrap, stage); bindTableCellEvents(); refreshAllOutputs();
-                    }
+                    });
+
+                    // Normalisasi array agar semua baris memiliki jumlah kolom yang sama rata
+                    // (Mencegah error 'undefined' atau tabel bolong jika data menjorok ke kanan)
+                    const maxCols = Math.max(...stage.table.rows.map(r => r.length));
+                    stage.table.rows.forEach(r => {
+                        for (let i = 0; i < maxCols; i++) {
+                            if (r[i] === undefined) r[i] = '';
+                        }
+                    });
+
+                    renderTable(wrap, stage); 
+                    bindTableCellEvents(); 
+                    refreshAllOutputs();
                 });
             });
         }

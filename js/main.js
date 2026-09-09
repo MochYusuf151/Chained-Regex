@@ -719,6 +719,39 @@
             const text = (e.clipboardData || window.clipboardData).getData('text');
             if (text) importText(text);
         });
+        tableWrap.addEventListener('keydown', (e) => { // copy selection range to clipboard in delimited format
+            const isKeyC = e.key.toLowerCase() === 'c';
+            
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+            if (isCtrlOrCmd && isKeyC) {
+                if (stage.table.selectionRange) {
+                    const { minR, maxR, minC, maxC } = stage.table.selectionRange;
+                    
+                    // Pengecekan: Jika user hanya menyeleksi 1 cell dan memblok teks sebagian di dalamnya,
+                    // biarkan default behavior browser agar user bisa mencopy teks biasa.
+                    const isSingleCell = (minR === maxR && minC === maxC);
+                    const textSelected = window.getSelection().toString();
+                    if (isSingleCell && textSelected.length > 0) return;
+
+                    const rowsToCopy = [];
+                    for (let i = minR; i <= maxR; i++) {
+                        const newRow = [];
+                        for (let j = minC; j <= maxC; j++) {
+                            newRow.push(stage.table.rows[i][j] || '');
+                        }
+                        rowsToCopy.push(newRow);
+                    }
+
+                    const tableString = serializeDelimited(rowsToCopy, stage.table.delimiter);
+                    if (tableString) {
+                        e.preventDefault(); // Cegah browser copy elemen HTML
+                        navigator.clipboard.writeText(tableString).then(() => showToast('Selection copied'));
+                        // showToast('Selection copied');
+                    }
+                }
+            }
+        });
         tableWrap.addEventListener('dragover', (e) => { e.preventDefault(); tableWrap.classList.add('drag-over'); });
         tableWrap.addEventListener('dragleave', () => tableWrap.classList.remove('drag-over'));
         tableWrap.addEventListener('drop', (e) => {
@@ -823,6 +856,36 @@
                     renderTable(wrap, stage); 
                     bindTableCellEvents(); 
                     refreshAllOutputs();
+                });
+
+                cell.addEventListener('click', (e) => {
+                    const r = parseInt(cell.dataset.row, 10);
+                    const c = parseInt(cell.dataset.col, 10);
+
+                    // Tentukan rentang seleksi (minR, maxR, minC, maxC)
+                    if (e.shiftKey && stage.table.selectionStart) {
+                        stage.table.selectionRange = {
+                            minR: Math.min(stage.table.selectionStart.r, r),
+                            maxR: Math.max(stage.table.selectionStart.r, r),
+                            minC: Math.min(stage.table.selectionStart.c, c),
+                            maxC: Math.max(stage.table.selectionStart.c, c)
+                        };
+                    } else {
+                        stage.table.selectionStart = { r, c };
+                        stage.table.selectionRange = { minR: r, maxR: r, minC: c, maxC: c };
+                    }
+
+                    // Beri tanda visual berdasarkan rentang seleksi
+                    const { minR, maxR, minC, maxC } = stage.table.selectionRange;
+                    tw.querySelectorAll('.cell').forEach(cEl => {
+                        const cr = parseInt(cEl.dataset.row, 10);
+                        const cc = parseInt(cEl.dataset.col, 10);
+                        if (cr >= minR && cr <= maxR && cc >= minC && cc <= maxC) {
+                            cEl.classList.add('selected-cell');
+                        } else {
+                            cEl.classList.remove('selected-cell');
+                        }
+                    });
                 });
             });
         }

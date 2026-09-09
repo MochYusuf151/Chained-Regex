@@ -243,7 +243,7 @@
             let matchIndex = 0;
 
             if (!stage.regex.search) {
-                let result = fn(input, null, null, null, null, stage.table, globalVar, fnUtils);
+                let result = fn(input, null, null, globalVar, fnUtils);
                 return result === undefined ? input : result;
             }
 
@@ -301,7 +301,9 @@
 
             let error = null, output = '';
             try {
-                if (source == null || source === '') {
+                if ((source == null || source === '') 
+                    && (stage.processingMode === 'script' && (stage.script == null || stage.script === '')
+                    || stage.processingMode === 'regex')) {
                     output = '';
                 } else {
                     let headerPrefix = '';

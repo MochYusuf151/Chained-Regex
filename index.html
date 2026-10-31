@@ -33,6 +33,18 @@
                 </div>
             </div>
             <div class="topbar-actions">
+                <!-- Tambahkan di .topbar-actions pada index.html -->
+                <label class="switch-row" style="margin-right:8px;">
+                    <span class="switch">
+                        <input type="checkbox" id="autoComputeToggle" checked>
+                        <span class="track"></span>
+                        <span class="thumb"></span>
+                    </span>
+                    Auto-run
+                </label>
+                <button class="btn btn-primary" id="runPipelineBtn">
+                    ▶ Run Pipeline
+                </button>
                 <button class="btn btn-ghost btn-icon" id="resetBtn" title="Reset pipeline">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 12a9 9 0 1 0 3-6.7" />

@@ -3,6 +3,8 @@
 
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
+    let autoCompute = true;
+    const autoComputeCharLimit = 10000;
     let globalVar = {};
     let fnUtils = {
         transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
@@ -278,6 +280,7 @@
 
     function computeAll() {
         let prevOutput = '';
+        globalVar = {};
         
         state.stages.forEach((stage, idx) => {
             const isUsingPrev = (idx > 0 && stage.usePreviousOutput);
@@ -491,9 +494,14 @@
         const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
         const rows = stage.table.rows;
         if (!rows.length || !rows[0].length) {
-            tableWrap.innerHTML = `<div class="table-empty">No data yet.<br><b>Paste</b> a CSV/TSV block here, or use "Paste from clipboard".</div>`;
+            tableWrap.innerHTML = `<div class="table-empty">No data yet.</div>`;
             return;
         }
+
+        const MAX_VISIBLE_ROWS = 100; // Batasi render elemen DOM
+        const isTruncated = rows.length > MAX_VISIBLE_ROWS;
+        const visibleRows = rows.slice(0, MAX_VISIBLE_ROWS);
+
         const colCount = Math.max(...rows.map(r => r.length));
         let html = '<table class="pipeline-table"><tbody>';
         html += '<tr><td class="rowhandle"></td>';
@@ -501,7 +509,8 @@
             html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
         }
         html += '</tr>';
-        rows.forEach((row, r) => {
+
+        visibleRows.forEach((row, r) => {
             const isHeaderRow = stage.table.hasHeader && r === 0;
             html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
             for (let c = 0; c < colCount; c++) {
@@ -512,6 +521,13 @@
             html += '</tr>';
         });
         html += '</tbody></table>';
+
+        if (isTruncated) {
+            html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
+                Menampilkan <b>${MAX_VISIBLE_ROWS}</b> dari <b>${rows.length}</b> baris (semua baris tetap diproses saat Run).
+            </div>`;
+        }
+
         tableWrap.innerHTML = html;
     }
 
@@ -593,7 +609,36 @@
         addBtn.disabled = false;
     }
 
-    function refreshAllOutputs() {
+    // Fungsi untuk mengecek total karakter dan mematikan Auto-run jika > autoComputeCharLimit
+    function checkAutoComputeLimit() {
+        const autoToggle = document.getElementById('autoComputeToggle');
+        if (!autoToggle) return;
+
+        // Hitung total karakter dari seluruh stage yang ada
+        const totalChars = state.stages.reduce((acc, stage) => {
+            const src = stage.inputMode === 'table'
+                ? serializeDelimited(stage.table.rows, stage.table.delimiter)
+                : (stage.inputString || '');
+            return acc + src.length;
+        }, 0);
+
+        // Matikan Auto-run jika karakter lebih dari autoComputeCharLimit dan posisi sakelar sedang aktif
+        if (totalChars > autoComputeCharLimit && autoCompute) {
+            autoCompute = false;
+            autoToggle.checked = false;
+            showToast(`Auto-run disabled (Input > ${autoComputeCharLimit} characters)`);
+        }
+    }
+
+    function refreshAllOutputs(force = false) {
+        // Cek batas karakter sebelum memutuskan untuk kalkulasi otomatis
+        checkAutoComputeLimit();
+
+        // Jika Auto-run mati dan tidak dipicu tombol manual, batalkan pemrosesan
+        if (!autoCompute && !force) {
+            return; 
+        }
+        
         computeAll();
         document.querySelectorAll('.stage-wrap').forEach(wrap => {
             const stage = state.stages.find(s => s.id === wrap.dataset.stageId);
@@ -1031,6 +1076,16 @@
             setTimeout(() => {
                 navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
             }, 320);
+        });
+
+        document.getElementById('autoComputeToggle').addEventListener('change', (e) => {
+            autoCompute = e.target.checked;
+            if (autoCompute) refreshAllOutputs(true);
+        });
+
+        document.getElementById('runPipelineBtn').addEventListener('click', () => {
+            refreshAllOutputs(true); // Paksa perhitungan berjalan
+            showToast('Pipeline executed');
         });
     }
 

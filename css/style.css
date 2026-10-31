@@ -855,3 +855,7 @@ select {
     background-color: rgba(87, 224, 192, .08);; /* Warna biru muda, bisa disesuaikan */
     outline: 1px solid #1976d2; /* Garis batas agar mirip Excel */
 }
+
+[data-role="scriptField"] {
+    font-family: 'Consolas', 'Courier New', monospace;
+}

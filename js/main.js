@@ -7,6 +7,7 @@
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
     const TEXT_FIELD_VISIBLE_CHAR_LENGTH = 100000;
     const TABLE_MAX_VISIBLE_ROWS = 50;
+    const TABLE_MAX_CELL_VISIBLE_CHARS = 200;    // Batas jumlah karakter per sel di DOM
     let globalVar = {};
     let fnUtils = {
         transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
@@ -502,44 +503,55 @@
     }
 
     function renderTable(wrap, stage) {
-        const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
-        const rows = stage.table.rows;
-        if (!rows.length || !rows[0].length) {
-            tableWrap.innerHTML = `<div class="table-empty">No data yet.</div>`;
-            return;
-        }
+    const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
+    const rows = stage.table.rows;
+    if (!rows.length || !rows[0].length) {
+        tableWrap.innerHTML = `<div class="table-empty">No data yet.</div>`;
+        return;
+    }
 
-        const isTruncated = rows.length > TABLE_MAX_VISIBLE_ROWS;
-        const visibleRows = rows.slice(0, TABLE_MAX_VISIBLE_ROWS);
+    const isTruncatedRows = rows.length > TABLE_MAX_VISIBLE_ROWS;
+    const visibleRows = rows.slice(0, TABLE_MAX_VISIBLE_ROWS);
+    const colCount = Math.max(...rows.map(r => r.length));
 
-        const colCount = Math.max(...rows.map(r => r.length));
-        let html = '<table class="pipeline-table"><tbody>';
-        html += '<tr><td class="rowhandle"></td>';
+    let html = '<table class="pipeline-table"><tbody>';
+    html += '<tr><td class="rowhandle"></td>';
+    for (let c = 0; c < colCount; c++) {
+        html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
+    }
+    html += '</tr>';
+
+    visibleRows.forEach((row, r) => {
+        const isHeaderRow = stage.table.hasHeader && r === 0;
+        html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
+        
         for (let c = 0; c < colCount; c++) {
-            html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
+            const tag = isHeaderRow ? 'th' : 'td';
+            const rawVal = row[c] != null ? String(row[c]) : '';
+            
+            // Potong teks jika melebihi batas TABLE_MAX_CELL_VISIBLE_CHARS
+            const isTruncatedCell = rawVal.length > TABLE_MAX_CELL_VISIBLE_CHARS;
+            const displayVal = isTruncatedCell 
+                ? rawVal.substring(0, TABLE_MAX_CELL_VISIBLE_CHARS) + '…' 
+                : rawVal;
+
+            const editable = (stage.id != state.stages[0]?.id && stage.usePreviousOutput) ? 'false' : 'true';
+            const tooltip = isTruncatedCell ? `title="Dipotong untuk tampilan (Total: ${rawVal.length} karakter)"` : '';
+
+            html += `<${tag} class="cell" contenteditable="${editable}" data-row="${r}" data-col="${c}" ${tooltip}>${escapeHtml(displayVal)}</${tag}>`;
         }
         html += '</tr>';
+    });
+    html += '</tbody></table>';
 
-        visibleRows.forEach((row, r) => {
-            const isHeaderRow = stage.table.hasHeader && r === 0;
-            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
-            for (let c = 0; c < colCount; c++) {
-                const tag = isHeaderRow ? 'th' : 'td';
-                const val = row[c] != null ? row[c] : '';
-                html += `<${tag} class="cell" contenteditable="${stage.id != state.stages[0]?.id && stage.usePreviousOutput ? 'false' : 'true'}" data-row="${r}" data-col="${c}">${escapeHtml(val)}</${tag}>`;
-            }
-            html += '</tr>';
-        });
-        html += '</tbody></table>';
-
-        if (isTruncated) {
-            html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
-                Menampilkan <b>${TABLE_MAX_VISIBLE_ROWS}</b> dari <b>${rows.length}</b> baris (semua baris tetap diproses saat Run).
-            </div>`;
-        }
-
-        tableWrap.innerHTML = html;
+    if (isTruncatedRows) {
+        html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
+            Showing <b>${TABLE_MAX_VISIBLE_ROWS}</b> of <b>${rows.length}</b> lines (all lines is still processed on Run).
+        </div>`;
     }
+
+    tableWrap.innerHTML = html;
+}
 
     function renderProcessingArea(wrap, stage) {
         const area = wrap.querySelector('[data-role="processingArea"]');

@@ -83,19 +83,18 @@
             collapsed: false,
             inputMode: 'text',
             inputString: '',
+            saveInputToUrl: false, // Flag per-stage (default false)
             usePreviousOutput: true,
             processingMode: 'regex',
             regex: { search: '', flags: 'gm', substitute: '', replaceMode: '0', iteration: 1 },
             script: 'return inputString;',
             output: '',
             ...overrides,
-            // Menangani table dan rows secara spesifik
             table: {
                 rows: [['col1', 'col2'], ['', '']],
                 delimiter: ',',
                 hasHeader: false,
                 ...(overrides.table || {}),
-                // Memastikan rows punya fallback jika kosong/tidak ada
                 rows: (overrides.table && overrides.table.rows && overrides.table.rows.length > 0) 
                     ? overrides.table.rows 
                     : [['col1', 'col2'], ['', '']]
@@ -118,15 +117,32 @@
         try {
             const cleanedState = {
                 ...state,
-                stages: state.stages.map(({ inputString, output, _computedInput, table: { rows, ...tableRest }, ...rest }) => ({
-                    ...rest,
-                    table: tableRest
-                }))
+                stages: state.stages.map(stage => {
+                    // Keluarkan properti transient yang tidak perlu di-encode
+                    const { output, _computedInput, ...rest } = stage;
+
+                    // Jika stage ini TIDAK mengaktifkan saveInputToUrl, buang inputString & table.rows miliknya
+                    if (!stage.saveInputToUrl) {
+                        const { inputString, table, ...otherRest } = rest;
+                        const { rows, ...tableRest } = table || {};
+                        return {
+                            ...otherRest,
+                            table: tableRest
+                        };
+                    }
+
+                    // Jika stage ini MENGAKTIFKAN saveInputToUrl, simpan seluruh datanya
+                    return rest;
+                })
             };
+
             const json = JSON.stringify(cleanedState);
             return window.LZString ? LZString.compressToEncodedURIComponent(json) : encodeURIComponent(json);
-        } catch (e) { return ''; }
+        } catch (e) {
+            return '';
+        }
     }
+    
     function decodeState(str) {
         try {
             const json = window.LZString ? LZString.decompressFromEncodedURIComponent(str) : decodeURIComponent(str);
@@ -412,15 +428,23 @@
           <div class="section-label-row">
             <span class="section-label">Input</span>
             <div class="section-tools">
-              ${!isFirst ? `
-              <label class="switch-row" title="Feed this stage from the previous stage's output">
-                <span class="switch"><input type="checkbox" data-role="usePrev" ${stage.usePreviousOutput ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></span>
-                Use previous output
-              </label>` : ''}
-              <div class="segmented" data-role="inputModeSeg">
-                <button type="button" data-value="text" class="${stage.inputMode === 'text' ? 'active' : ''}">Text</button>
-                <button type="button" data-value="table" class="${stage.inputMode === 'table' ? 'active' : ''}">Table</button>
-              </div>
+                <label class="switch-row" title="Simpan data input stage ini ke dalam URL parameter d=">
+                    <span class="switch">
+                    <input type="checkbox" data-role="saveInputUrl" ${stage.saveInputToUrl ? 'checked' : ''}>
+                    <span class="track"></span>
+                    <span class="thumb"></span>
+                    </span>
+                    Save Input to URL
+                </label>
+                ${!isFirst ? `
+                <label class="switch-row" title="Feed this stage from the previous stage's output">
+                    <span class="switch"><input type="checkbox" data-role="usePrev" ${stage.usePreviousOutput ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></span>
+                    Use previous output
+                </label>` : ''}
+                <div class="segmented" data-role="inputModeSeg">
+                    <button type="button" data-value="text" class="${stage.inputMode === 'text' ? 'active' : ''}">Text</button>
+                    <button type="button" data-value="table" class="${stage.inputMode === 'table' ? 'active' : ''}">Table</button>
+                </div>
             </div>
           </div>
           <div data-role="inputArea"></div>
@@ -783,6 +807,19 @@
         wrap.querySelector('[data-role="copyOutput"]').addEventListener('click', () => {
             navigator.clipboard.writeText(stage.output || '').then(() => showToast('Output copied'));
         });
+
+        const saveInputUrl = wrap.querySelector('[data-role="saveInputUrl"]');
+        if (saveInputUrl) {
+            saveInputUrl.addEventListener('change', (e) => {
+                stage.saveInputToUrl = e.target.checked;
+                if (stage.saveInputToUrl) {
+                    showToast(`${stage.name || 'Stage'} input will be saved to URL`);
+                } else {
+                    showToast(`${stage.name || 'Stage'} input excluded from URL`);
+                }
+                persistToUrl(); // Simpan perubahan kondisi per-stage ke URL
+            });
+        }
 
         bindInputAreaEvents(wrap, stage);
         bindProcessingAreaEvents(wrap, stage);

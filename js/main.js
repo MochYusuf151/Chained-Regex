@@ -5,6 +5,7 @@
     let uidCounter = 0;
     let autoCompute = true;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
+    const TEXT_FIELD_VISIBLE_CHAR_LENGTH = 100000;
     const TABLE_MAX_VISIBLE_ROWS = 50;
     let globalVar = {};
     let fnUtils = {
@@ -589,17 +590,39 @@
     function updateStageOutput(wrap, stage) {
         const outField = wrap.querySelector('[data-role="outputField"]');
         const errBanner = wrap.querySelector('[data-role="errorBanner"]');
-        if (outField) outField.value = stage.error ? '' : stage.output;
+
+        // 1. Update elemen Output
+        if (outField) {
+            if (stage.error) {
+                outField.value = '';
+            } else {
+                const fullOutput = stage.output || '';
+                if (fullOutput.length > TEXT_FIELD_VISIBLE_CHAR_LENGTH) {
+                    outField.value = fullOutput.substring(0, TEXT_FIELD_VISIBLE_CHAR_LENGTH) + 
+                        `\n\n... [Output truncated. Total: ${fullOutput.length} characters. Use "Copy" button to copy full data]`;
+                } else {
+                    outField.value = fullOutput;
+                }
+            }
+        }
+
         if (errBanner) {
             if (stage.error) { errBanner.style.display = 'block'; errBanner.textContent = 'Error: ' + stage.error; }
             else { errBanner.style.display = 'none'; }
         }
 
-        // Menampilkan Output Sebelumnya ke Form Textarea Input (Jika 'Use previous output' dinyalakan)
+        // 2. Update elemen Input jika 'Use previous output' aktif
         if (stage.inputMode === 'text' && stage.usePreviousOutput && wrap.dataset.hasPrev === '1') {
             const inField = wrap.querySelector('[data-role="inputField"]');
-            if (inField && inField.value !== stage._computedInput) {
-                inField.value = stage._computedInput || '';
+            if (inField) {
+                const fullInput = stage._computedInput || '';
+                const displayInput = fullInput.length > TEXT_FIELD_VISIBLE_CHAR_LENGTH 
+                    ? fullInput.substring(0, TEXT_FIELD_VISIBLE_CHAR_LENGTH) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
+                    : fullInput;
+                
+                if (inField.value !== displayInput) {
+                    inField.value = displayInput;
+                }
             }
         }
 

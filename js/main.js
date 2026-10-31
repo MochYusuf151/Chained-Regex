@@ -4,7 +4,8 @@
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
     let autoCompute = true;
-    const autoComputeCharLimit = 10000;
+    const AUTO_COMPUTE_CHAR_LIMIT = 10000;
+    const TABLE_MAX_VISIBLE_ROWS = 50;
     let globalVar = {};
     let fnUtils = {
         transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
@@ -348,6 +349,15 @@
         persistToUrl();
     }
 
+    function cleanComputeData () {
+        state.stages.forEach((stage, idx) => {
+            if (idx > 0 && state.stages[idx - 1]._computedInput) {
+                state.stages[idx - 1]._computedInput = null;
+            }
+        });
+        globalVar = {};
+    }
+
     /* ============================= Rendering ============================= */
     const pipelineEl = document.getElementById('pipeline');
     const titleField = document.getElementById('titleField');
@@ -498,9 +508,8 @@
             return;
         }
 
-        const MAX_VISIBLE_ROWS = 100; // Batasi render elemen DOM
-        const isTruncated = rows.length > MAX_VISIBLE_ROWS;
-        const visibleRows = rows.slice(0, MAX_VISIBLE_ROWS);
+        const isTruncated = rows.length > TABLE_MAX_VISIBLE_ROWS;
+        const visibleRows = rows.slice(0, TABLE_MAX_VISIBLE_ROWS);
 
         const colCount = Math.max(...rows.map(r => r.length));
         let html = '<table class="pipeline-table"><tbody>';
@@ -524,7 +533,7 @@
 
         if (isTruncated) {
             html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
-                Menampilkan <b>${MAX_VISIBLE_ROWS}</b> dari <b>${rows.length}</b> baris (semua baris tetap diproses saat Run).
+                Menampilkan <b>${TABLE_MAX_VISIBLE_ROWS}</b> dari <b>${rows.length}</b> baris (semua baris tetap diproses saat Run).
             </div>`;
         }
 
@@ -598,18 +607,20 @@
     }
 
     function renderAll() {
-        pipelineEl.innerHTML = '';
+        // Kosongkan kontainer utama
+        while (pipelineEl.firstChild) {
+            pipelineEl.removeChild(pipelineEl.firstChild); // Pelepasan DOM node secara eksplisit
+        }
+
         state.stages.forEach((stage, idx) => {
             const wrap = renderStage(stage, idx);
             wrap.dataset.hasPrev = idx > 0 ? '1' : '0';
             pipelineEl.appendChild(wrap);
         });
         refreshAllOutputs();
-        const addBtn = document.getElementById('addStageBtn');
-        addBtn.disabled = false;
     }
 
-    // Fungsi untuk mengecek total karakter dan mematikan Auto-run jika > autoComputeCharLimit
+    // Fungsi untuk mengecek total karakter dan mematikan Auto-run jika > AUTO_COMPUTE_CHAR_LIMIT
     function checkAutoComputeLimit() {
         const autoToggle = document.getElementById('autoComputeToggle');
         if (!autoToggle) return;
@@ -622,11 +633,11 @@
             return acc + src.length;
         }, 0);
 
-        // Matikan Auto-run jika karakter lebih dari autoComputeCharLimit dan posisi sakelar sedang aktif
-        if (totalChars > autoComputeCharLimit && autoCompute) {
+        // Matikan Auto-run jika karakter lebih dari AUTO_COMPUTE_CHAR_LIMIT dan posisi sakelar sedang aktif
+        if (totalChars > AUTO_COMPUTE_CHAR_LIMIT && autoCompute) {
             autoCompute = false;
             autoToggle.checked = false;
-            showToast(`Auto-run disabled (Input > ${autoComputeCharLimit} characters)`);
+            showToast(`Auto-run disabled (Input > ${AUTO_COMPUTE_CHAR_LIMIT} characters)`);
         }
     }
 
@@ -644,6 +655,7 @@
             const stage = state.stages.find(s => s.id === wrap.dataset.stageId);
             if (stage) updateStageOutput(wrap, stage);
         });
+        cleanComputeData();
     }
 
     /* ============================= Event binding ============================= */
@@ -766,7 +778,6 @@
             const { rows, delimiter } = parseDelimited(text, stage.table.delimiter);
             stage.table.rows = rows;
             renderTable(wrap, stage);
-            bindTableCellEvents();
             refreshAllOutputs();
         }
 
@@ -840,146 +851,173 @@
         hasHeaderToggle.addEventListener('change', (e) => {
             stage.table.hasHeader = e.target.checked;
             renderTable(wrap, stage);
-            bindTableCellEvents();
             refreshAllOutputs();
         });
         addRowBtn.addEventListener('click', () => {
             const cols = stage.table.rows.length ? Math.max(...stage.table.rows.map(r => r.length)) : 2;
             stage.table.rows.push(new Array(cols).fill(''));
             renderTable(wrap, stage);
-            bindTableCellEvents();
             refreshAllOutputs();
         });
         addColBtn.addEventListener('click', () => {
             if (!stage.table.rows.length) stage.table.rows.push([]);
             stage.table.rows.forEach(r => r.push(''));
             renderTable(wrap, stage);
-            bindTableCellEvents();
             refreshAllOutputs();
         });
         clearBtn.addEventListener('click', () => {
             if (!confirm('Clear this table?')) return;
             stage.table.rows = [];
             renderTable(wrap, stage);
-            bindTableCellEvents();
             refreshAllOutputs();
         });
 
-        function bindTableCellEvents() {
-            const tw = wrap.querySelector('[data-role="tableWrap"]');
-            tw.querySelectorAll('[data-role="delRow"]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const r = parseInt(btn.dataset.row, 10);
-                    stage.table.rows.splice(r, 1);
-                    renderTable(wrap, stage); bindTableCellEvents(); refreshAllOutputs();
-                });
-            });
-            tw.querySelectorAll('[data-role="delCol"]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const c = parseInt(btn.dataset.col, 10);
-                    stage.table.rows.forEach(row => row.splice(c, 1));
-                    renderTable(wrap, stage); bindTableCellEvents(); refreshAllOutputs();
-                });
-            });
-            const debouncedSync = debounce(() => refreshAllOutputs(), 250);
-            tw.querySelectorAll('.cell').forEach(cell => {
-                cell.addEventListener('input', () => {
-                    const r = parseInt(cell.dataset.row, 10), c = parseInt(cell.dataset.col, 10);
-                    if (!stage.table.rows[r]) stage.table.rows[r] = [];
-                    stage.table.rows[r][c] = cell.textContent;
-                    debouncedSync();
-                });
+        // Di dalam bindInputAreaEvents() untuk mode table:
+        renderTable(wrap, stage);
 
-                cell.addEventListener('paste', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault(); // Pindahkan ke luar agar selalu mencegah browser paste HTML berantakan ke dalam cell
+        // Pasang delegation SATU KALI SAJA pada induk kontainer
+        bindTableDelegation(wrap, stage);
+    }
 
-                    const text = (e.clipboardData || window.clipboardData).getData('text');
-                    if (!text) return;
+    function bindTableDelegation(wrap, stage) {
+        const tw = wrap.querySelector('[data-role="tableWrap"]');
+        if (!tw) return;
 
-                    const r0 = parseInt(cell.dataset.row, 10);
-                    const c0 = parseInt(cell.dataset.col, 10);
-                    
-                    // Parse data clipboard menjadi array 2D
-                    const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
+        // Cegah pendaftaran listener ganda jika fungsi dipanggil berulang kali
+        if (tw.dataset.delegated === 'true') return;
+        tw.dataset.delegated = 'true';
 
-                    if (pastedRows.length === 1 && pastedRows[0].length === 1) {
-                        e.preventDefault(); // Tetap cegah HTML berantakan masuk
-                        
-                        const val = pastedRows[0][0]; // Ambil nilai bersih (tanpa trailing newline excel)
-                        const selection = window.getSelection();
-                        
-                        if (selection.rangeCount > 0) {
-                            const range = selection.getRangeAt(0);
-                            range.deleteContents(); // Hapus teks yang mungkin sedang di-blok/highlight di dalam cell
-                            range.insertNode(document.createTextNode(val)); // Sisipkan teks di kursor
-                            range.collapse(false); // Pindahkan kursor ke akhir teks yang di-paste
-                            
-                            // Picu event input secara manual agar state `stage.table.rows` langsung tersimpan
-                            cell.dispatchEvent(new Event('input', { bubbles: true }));
-                        }
-                        return; // Hentikan fungsi di sini, jangan jalankan multi-cell paste di bawah
-                    }
+        // Debounce khusus untuk sinkronisasi input sel agar tidak memicu computeAll terus-menerus
+        const debouncedSync = debounce(() => refreshAllOutputs(), 250);
 
-                    // Timpa baris dan kolom dimulai dari cell yang dipilih (r0, c0)
-                    pastedRows.forEach((row, ri) => {
-                        row.forEach((val, ci) => {
-                            const rr = r0 + ri;
-                            const cc = c0 + ci;
-                            
-                            // Buat baris baru jika paste melebihi baris tabel saat ini
-                            if (!stage.table.rows[rr]) {
-                                stage.table.rows[rr] = [];
-                            }
-                            stage.table.rows[rr][cc] = val;
-                        });
-                    });
+        // ---------------- 1. Delegation Event CLICK ----------------
+        tw.addEventListener('click', (e) => {
+            // A. Hapus Baris
+            const delRowBtn = e.target.closest('[data-role="delRow"]');
+            if (delRowBtn) {
+                const r = parseInt(delRowBtn.dataset.row, 10);
+                stage.table.rows.splice(r, 1);
+                renderTable(wrap, stage);
+                refreshAllOutputs();
+                return;
+            }
 
-                    // Normalisasi array agar semua baris memiliki jumlah kolom yang sama rata
-                    // (Mencegah error 'undefined' atau tabel bolong jika data menjorok ke kanan)
-                    const maxCols = Math.max(...stage.table.rows.map(r => r.length));
-                    stage.table.rows.forEach(r => {
-                        for (let i = 0; i < maxCols; i++) {
-                            if (r[i] === undefined) r[i] = '';
-                        }
-                    });
+            // B. Hapus Kolom
+            const delColBtn = e.target.closest('[data-role="delCol"]');
+            if (delColBtn) {
+                const c = parseInt(delColBtn.dataset.col, 10);
+                stage.table.rows.forEach(row => row.splice(c, 1));
+                renderTable(wrap, stage);
+                refreshAllOutputs();
+                return;
+            }
 
-                    renderTable(wrap, stage); 
-                    bindTableCellEvents(); 
-                    refreshAllOutputs();
-                });
+            // C. Klik/Seleksi Sel Tabel
+            const cell = e.target.closest('.cell');
+            if (cell) {
+                handleCellClick(cell, e, tw, stage);
+            }
+        });
 
-                cell.addEventListener('click', (e) => {
-                    const r = parseInt(cell.dataset.row, 10);
-                    const c = parseInt(cell.dataset.col, 10);
-                    // Tentukan rentang seleksi (minR, maxR, minC, maxC)
-                    if (e.shiftKey && stage.table.selectionStart) {
-                        stage.table.selectionRange = {
-                            minR: Math.min(stage.table.selectionStart.r, r),
-                            maxR: Math.max(stage.table.selectionStart.r, r),
-                            minC: Math.min(stage.table.selectionStart.c, c),
-                            maxC: Math.max(stage.table.selectionStart.c, c)
-                        };
-                    } else {
-                        stage.table.selectionStart = { r, c };
-                        stage.table.selectionRange = { minR: r, maxR: r, minC: c, maxC: c };
-                    }
+        // ---------------- 2. Delegation Event INPUT ----------------
+        tw.addEventListener('input', (e) => {
+            const cell = e.target.closest('.cell');
+            if (!cell) return;
 
-                    // Beri tanda visual berdasarkan rentang seleksi
-                    const { minR, maxR, minC, maxC } = stage.table.selectionRange;
-                    tw.querySelectorAll('.cell').forEach(cEl => {
-                        const cr = parseInt(cEl.dataset.row, 10);
-                        const cc = parseInt(cEl.dataset.col, 10);
-                        if (cr >= minR && cr <= maxR && cc >= minC && cc <= maxC) {
-                            cEl.classList.add('selected-cell');
-                        } else {
-                            cEl.classList.remove('selected-cell');
-                        }
-                    });
-                });
-            });
+            const r = parseInt(cell.dataset.row, 10);
+            const c = parseInt(cell.dataset.col, 10);
+
+            if (!stage.table.rows[r]) stage.table.rows[r] = [];
+            stage.table.rows[r][c] = cell.textContent;
+
+            debouncedSync();
+        });
+
+        // ---------------- 3. Delegation Event PASTE ----------------
+        tw.addEventListener('paste', (e) => {
+            const cell = e.target.closest('.cell');
+            if (!cell) return;
+
+            handleCellPaste(cell, e, wrap, stage);
+        });
+    }
+
+    function handleCellClick(cell, e, tw, stage) {
+        const r = parseInt(cell.dataset.row, 10);
+        const c = parseInt(cell.dataset.col, 10);
+
+        // Tentukan rentang seleksi (Shift + Click untuk multi-select)
+        if (e.shiftKey && stage.table.selectionStart) {
+            stage.table.selectionRange = {
+                minR: Math.min(stage.table.selectionStart.r, r),
+                maxR: Math.max(stage.table.selectionStart.r, r),
+                minC: Math.min(stage.table.selectionStart.c, c),
+                maxC: Math.max(stage.table.selectionStart.c, c)
+            };
+        } else {
+            stage.table.selectionStart = { r, c };
+            stage.table.selectionRange = { minR: r, maxR: r, minC: c, maxC: c };
         }
-        bindTableCellEvents();
+
+        // Beri highlight visual class 'selected-cell'
+        const { minR, maxR, minC, maxC } = stage.table.selectionRange;
+        tw.querySelectorAll('.cell').forEach(cEl => {
+            const cr = parseInt(cEl.dataset.row, 10);
+            const cc = parseInt(cEl.dataset.col, 10);
+            if (cr >= minR && cr <= maxR && cc >= minC && cc <= maxC) {
+                cEl.classList.add('selected-cell');
+            } else {
+                cEl.classList.remove('selected-cell');
+            }
+        });
+    }
+
+    function handleCellPaste(cell, e, wrap, stage) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!text) return;
+
+        const r0 = parseInt(cell.dataset.row, 10);
+        const c0 = parseInt(cell.dataset.col, 10);
+        
+        const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
+
+        // Kasus 1: Paste teks single cell biasa
+        if (pastedRows.length === 1 && pastedRows[0].length === 1) {
+            const val = pastedRows[0][0];
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(document.createTextNode(val));
+                range.collapse(false);
+                cell.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return;
+        }
+
+        // Kasus 2: Paste data multi-baris / multi-kolom (CSV/Excel)
+        pastedRows.forEach((row, ri) => {
+            row.forEach((val, ci) => {
+                const rr = r0 + ri;
+                const cc = c0 + ci;
+                if (!stage.table.rows[rr]) stage.table.rows[rr] = [];
+                stage.table.rows[rr][cc] = val;
+            });
+        });
+
+        // Ratakan jumlah kolom agar tidak ada undefined
+        const maxCols = Math.max(...stage.table.rows.map(r => r.length));
+        stage.table.rows.forEach(r => {
+            for (let i = 0; i < maxCols; i++) {
+                if (r[i] === undefined) r[i] = '';
+            }
+        });
+
+        renderTable(wrap, stage);
+        refreshAllOutputs();
     }
 
     function bindProcessingAreaEvents(wrap, stage) {

@@ -519,29 +519,30 @@
         const area = wrap.querySelector('[data-role="inputArea"]');
         if (stage.inputMode === 'text') {
             area.innerHTML = `
-      <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste, type input, or drag text file here text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'disabled' : ''}></textarea>
-      <div class="io-count" data-role="inputCount"></div>
-    `;
+                <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste, type input, or drag text file here text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'disabled' : ''}></textarea>
+                <div class="io-count" data-role="inputCount"></div>
+            `;
             area.querySelector('[data-role="inputField"]').value = stage.inputString;
         } else {
             area.innerHTML = `
-      <div class="table-toolbar">
-        <button class="btn btn-sm" data-role="pasteClipboard">📋 Paste from clipboard</button>
-        <select class="select" data-role="delimiterSelect" style="width:auto;">
-          <option value="auto" ${stage.table.delimiter === 'auto' ? 'selected' : ''}>Auto-detect</option>
-          <option value="," ${stage.table.delimiter === ',' ? 'selected' : ''}>Comma</option>
-          <option value="\t" ${stage.table.delimiter === '\t' ? 'selected' : ''}>Tab</option>
-          <option value=";" ${stage.table.delimiter === ';' ? 'selected' : ''}>Semicolon</option>
-        </select>
-        <label class="switch-row"><span class="switch"><input type="checkbox" data-role="hasHeader" ${stage.table.hasHeader ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></span>Header row</label>
-        <button class="btn btn-ghost btn-sm" data-role="addRow">+ Row</button>
-        <button class="btn btn-ghost btn-sm" data-role="addCol">+ Col</button>
-        <button class="btn btn-ghost btn-sm" data-role="clearTable">Clear</button>
-        <button class="btn btn-ghost btn-sm" data-role="copyTable">Copy Table</button>
-      </div>
-      <div class="table-wrap" data-role="tableWrap" tabindex="0"></div>
-      <div class="io-count" data-role="inputCount"></div>
-    `;
+                <div class="table-toolbar">
+                    <button class="btn btn-sm" data-role="pasteClipboard">📋 Paste from clipboard</button>
+                    <select class="select" data-role="delimiterSelect" style="width:auto;">
+                    <option value="auto" ${stage.table.delimiter === 'auto' ? 'selected' : ''}>Auto-detect</option>
+                    <option value="," ${stage.table.delimiter === ',' ? 'selected' : ''}>Comma</option>
+                    <option value="\t" ${stage.table.delimiter === '\t' ? 'selected' : ''}>Tab</option>
+                    <option value=";" ${stage.table.delimiter === ';' ? 'selected' : ''}>Semicolon</option>
+                    </select>
+                    <label class="switch-row"><span class="switch"><input type="checkbox" data-role="hasHeader" ${stage.table.hasHeader ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></span>Header row</label>
+                    <button class="btn btn-ghost btn-sm" data-role="addRow">+ Row</button>
+                    <button class="btn btn-ghost btn-sm" data-role="addCol">+ Col</button>
+                    <button class="btn btn-ghost btn-sm" data-role="clearTable">Clear All</button>
+                    <button class="btn btn-ghost btn-sm" data-role="clearData" title="Clear data rows only">Clear Data</button>
+                    <button class="btn btn-ghost btn-sm" data-role="copyTable">Copy Table</button>
+                </div>
+                <div class="table-wrap" data-role="tableWrap" tabindex="0"></div>
+                <div class="io-count" data-role="inputCount"></div>
+            `;
             renderTable(wrap, stage);
         }
     }
@@ -900,11 +901,24 @@
         const addRowBtn = wrap.querySelector('[data-role="addRow"]');
         const addColBtn = wrap.querySelector('[data-role="addCol"]');
         const clearBtn = wrap.querySelector('[data-role="clearTable"]');
+        const clearDataBtn = wrap.querySelector('[data-role="clearData"]');
         const copyBtn = wrap.querySelector('[data-role="copyTable"]');
 
         function importText(text) {
             const { rows, delimiter } = parseDelimited(text, stage.table.delimiter);
-            stage.table.rows = rows;
+            
+            // Cegah penimpaan jika opsi Header aktif dan tabel sudah punya data
+            if (stage.table.hasHeader && stage.table.rows.length > 0) {
+                const preservedHeader = stage.table.rows[0]; // Simpan header lama
+                
+                // Gabungkan header lama dengan data baru yang di-paste
+                // (Data baru akan ditambahkan mulai dari baris ke-1 ke bawah)
+                stage.table.rows = [preservedHeader, ...rows];
+            } else {
+                // Jika tidak ada header, timpa keseluruhan seperti biasa
+                stage.table.rows = rows;
+            }
+
             renderTable(wrap, stage);
             refreshAllOutputs();
         }
@@ -1025,6 +1039,26 @@
             refreshAllOutputs();
         });
 
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', () => {
+                if (!confirm('Clear all data but keep the header?')) return;
+                
+                // Jika opsi Header aktif dan tabel tidak kosong, simpan baris pertama
+                if (stage.table.hasHeader && stage.table.rows.length > 0) {
+                    const preservedHeader = stage.table.rows[0];
+                    const emptyRow = new Array(preservedHeader.length).fill(''); // Buat 1 baris kosong di bawah header
+                    
+                    stage.table.rows = [preservedHeader, emptyRow];
+                } else {
+                    // Jika tidak ada header, hapus bersih seperti biasa
+                    stage.table.rows = [];
+                }
+                
+                renderTable(wrap, stage);
+                refreshAllOutputs();
+            });
+        }
+
         // Di dalam bindInputAreaEvents() untuk mode table:
         renderTable(wrap, stage);
 
@@ -1137,8 +1171,15 @@
         
         const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
 
-        // Kasus 1: Paste teks single cell biasa
+        // --- KASUS 1: Paste Teks Single Cell ---
+        // Jangan ubah sel jika itu adalah bagian dari header (r0 === 0)
         if (pastedRows.length === 1 && pastedRows[0].length === 1) {
+            if (stage.table.hasHeader && r0 === 0) {
+                // Abaikan paste pada header untuk single cell
+                if (typeof showToast === 'function') showToast('Header tidak bisa diubah lewat paste');
+                return; 
+            }
+
             const val = pastedRows[0][0];
             const selection = window.getSelection();
             if (selection.rangeCount > 0) {
@@ -1151,11 +1192,22 @@
             return;
         }
 
-        // Kasus 2: Paste data multi-baris / multi-kolom (CSV/Excel)
+        // --- KASUS 2: Paste Data Multi-Baris/Multi-Kolom ---
+        
+        // Geser titik paste ke baris 1 (data pertama) jika user mencoba paste tepat di baris header
+        let startRow = r0;
+        if (stage.table.hasHeader && r0 === 0) {
+            startRow = 1;
+        }
+
         pastedRows.forEach((row, ri) => {
             row.forEach((val, ci) => {
-                const rr = r0 + ri;
+                const rr = startRow + ri; // Gunakan startRow yang sudah digeser
                 const cc = c0 + ci;
+                
+                // Perlindungan ganda: Jangan pernah timpa index 0 jika ada header
+                if (stage.table.hasHeader && rr === 0) return;
+
                 if (!stage.table.rows[rr]) stage.table.rows[rr] = [];
                 stage.table.rows[rr][cc] = val;
             });

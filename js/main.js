@@ -499,7 +499,7 @@
         const area = wrap.querySelector('[data-role="inputArea"]');
         if (stage.inputMode === 'text') {
             area.innerHTML = `
-      <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste or type input text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'disabled' : ''}></textarea>
+      <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste, type input, or drag text file here text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'disabled' : ''}></textarea>
       <div class="io-count" data-role="inputCount"></div>
     `;
             area.querySelector('[data-role="inputField"]').value = stage.inputString;
@@ -829,12 +829,48 @@
         if (stage.inputMode === 'text') {
             const field = wrap.querySelector('[data-role="inputField"]');
             if (field) {
+                // Event ketika pengguna mengetik biasa
                 field.addEventListener('input', (e) => {
                     stage.inputString = e.target.value;
                     refreshAllOutputs();
                 });
+
+                // ----------------------------------------------------
+                // Fitur Drag & Drop File untuk Input Text
+                // ----------------------------------------------------
+                field.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Wajib agar event drop bisa terpicu
+                    field.classList.add('drag-over'); // Beri highlight visual
+                });
+
+                field.addEventListener('dragleave', () => {
+                    field.classList.remove('drag-over'); // Hilangkan highlight
+                });
+
+                field.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    field.classList.remove('drag-over');
+
+                    // Ambil file yang dijatuhkan
+                    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (file) {
+                        // Baca isi file sebagai teks
+                        file.text().then(text => {
+                            field.value = text;              // Tampilkan di UI
+                            stage.inputString = text;        // Simpan ke state global
+                            refreshAllOutputs();             // Jalankan pipeline
+                            if (typeof showToast === 'function') {
+                                showToast(`File ${file.name} berhasil dimuat`);
+                            }
+                        }).catch(err => {
+                            if (typeof showToast === 'function') {
+                                showToast('Gagal membaca isi file');
+                            }
+                        });
+                    }
+                });
             }
-            return;
+            return; // Selesai untuk mode teks, keluar dari fungsi
         }
 
         const tableWrap = wrap.querySelector('[data-role="tableWrap"]');

@@ -919,3 +919,10 @@ select {
     background-color: rgba(87, 224, 192, .08);; /* Warna biru muda, bisa disesuaikan */
     outline: 1px solid #1976d2; /* Garis batas agar mirip Excel */
 }
+
+/* Efek visual saat file di-drag ke atas textarea */
+.textarea.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}

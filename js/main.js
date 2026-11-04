@@ -174,18 +174,37 @@
         } catch (e) { return null; }
     }
     function loadFromUrl() {
-        const params = new URLSearchParams(window.location.search);
-        const d = params.get('d');
-        if (d) {
-            const decoded = decodeState(d);
-            if (decoded) return decoded;
+        // 1. Coba baca dari Hash Fragment (#d=...)
+        const hash = window.location.hash;
+        if (hash.startsWith('#d=')) {
+            const d = hash.substring(3); // Ambil string setelah '#d='
+            if (d) {
+                const decoded = decodeState(d);
+                if (decoded) return decoded;
+            }
         }
+
+        // 2. Fallback: Coba baca dari Query Parameter (?d=...) untuk link lama
+        const params = new URLSearchParams(window.location.search);
+        const queryD = params.get('d');
+        if (queryD) {
+            const decoded = decodeState(queryD);
+            if (decoded) {
+                // (Opsional) Langsung pindahkan URL lama ke format Hash secara visual
+                history.replaceState({}, '', window.location.pathname + '#d=' + queryD);
+                return decoded;
+            }
+        }
+
         return defaultState();
     }
+    
     const persistToUrl = debounce(function () {
-        const params = new URLSearchParams(window.location.search);
-        params.set('d', encodeState());
-        const newUrl = window.location.pathname + '?' + params.toString();
+        const stateStr = encodeState();
+        if (!stateStr) return; // Abaikan jika kosong atau dibatasi (Limit 20k)
+
+        // Simpan ke hash fragment (#), pertahankan search query lain jika ada
+        const newUrl = window.location.pathname + window.location.search + '#d=' + stateStr;
         history.replaceState({}, '', newUrl);
     }, 300);
 
@@ -1299,9 +1318,15 @@
         document.getElementById('resetBtn').addEventListener('click', () => {
             if (!confirm('Reset the whole pipeline? This clears the current link.')) return;
             state = defaultState();
+            
+            // Hapus parameter 'd' dari query string (jika ada dari link lama)
             const params = new URLSearchParams(window.location.search);
             params.delete('d');
-            history.replaceState({}, '', window.location.pathname);
+            const newSearch = params.toString() ? '?' + params.toString() : '';
+            
+            // Timpa URL untuk menghilangkan query 'd' dan mengosongkan hash fragment
+            history.replaceState({}, '', window.location.pathname + newSearch);
+            
             titleField.value = ''; descField.value = '';
             docTitleLabel.textContent = 'Text Transformation Pipeline';
             document.title = 'Text Transformation Pipeline';

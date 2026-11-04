@@ -16,52 +16,69 @@
 
 <body>
 
-    <div class="topbar">
-        <div class="topbar-inner">
-            <div class="brand">
-                 <img src="favicon.svg" width="26" height="26" alt="Regex Pipeline logo">
-                <div class="brand-text">
-                    <span class="brand-title" id="docTitleLabel">Chained Regex Pipeline</span>
-                    <span class="brand-sub">Client-side · nothing leaves your browser</span>
-                </div>
+    <header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <img src="favicon.svg" width="28" height="28" alt="Regex Pipeline logo">
+            <div class="brand-text">
+                <span class="brand-title" id="docTitleLabel">Chained Regex Pipeline</span>
+                <span class="brand-sub">Client-side · nothing leaves your browser</span>
             </div>
-            <div class="topbar-actions">
-                <!-- Tambahkan di .topbar-actions pada index.html -->
-                <label class="switch-row" style="margin-right:8px;">
+        </div>
+
+        <div class="topbar-actions">
+            <!-- Grup 1: kontrol pipeline -->
+            <div class="action-group">
+                <label class="switch-row" title="Jalankan pipeline otomatis saat input berubah">
                     <span class="switch">
                         <input type="checkbox" id="autoComputeToggle" checked>
                         <span class="track"></span>
                         <span class="thumb"></span>
                     </span>
-                    Auto-run
+                    <span class="switch-label">Auto-run</span>
                 </label>
+
                 <button class="btn btn-primary" id="runPipelineBtn">
-                    ▶ Run Pipeline
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" />
+                    </svg>
+                    <span class="btn-label">Run Pipeline</span>
                 </button>
-                <button class="btn btn-ghost btn-icon" id="resetBtn" title="Reset pipeline">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+                <button class="btn btn-ghost btn-icon" id="resetBtn" title="Reset pipeline" aria-label="Reset pipeline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M3 12a9 9 0 1 0 3-6.7" />
                         <path d="M3 4v5h5" />
                     </svg>
                 </button>
-                <button class="btn btn-primary" id="copyResultBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </div>
+
+            <span class="divider" aria-hidden="true"></span>
+
+            <!-- Grup 2: aksi output -->
+            <div class="action-group">
+                <button class="btn btn-secondary" id="copyResultBtn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
                     </svg>
-                    Copy Result
+                    <span class="btn-label">Copy Result</span>
                 </button>
-                <button class="btn btn-secondary" id="copyLinkBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2.2">
+
+                <button class="btn btn-ghost" id="copyLinkBtn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1" />
                         <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" />
                     </svg>
-                    Copy share link
+                    <span class="btn-label">Share link</span>
                 </button>
             </div>
         </div>
     </div>
+</header>
 
     <div class="shell">
 

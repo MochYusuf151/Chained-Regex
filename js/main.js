@@ -92,7 +92,7 @@
             ...overrides,
             table: {
                 rows: [['col1', 'col2'], ['', '']],
-                delimiter: ',',
+                delimiter: '\t',
                 hasHeader: false,
                 ...(overrides.table || {}),
                 rows: (overrides.table && overrides.table.rows && overrides.table.rows.length > 0) 
@@ -529,8 +529,8 @@
                     <button class="btn btn-sm" data-role="pasteClipboard">📋 Paste from clipboard</button>
                     <select class="select" data-role="delimiterSelect" style="width:auto;">
                     <option value="auto" ${stage.table.delimiter === 'auto' ? 'selected' : ''}>Auto-detect</option>
-                    <option value="," ${stage.table.delimiter === ',' ? 'selected' : ''}>Comma</option>
                     <option value="\t" ${stage.table.delimiter === '\t' ? 'selected' : ''}>Tab</option>
+                    <option value="," ${stage.table.delimiter === ',' ? 'selected' : ''}>Comma</option>
                     <option value=";" ${stage.table.delimiter === ';' ? 'selected' : ''}>Semicolon</option>
                     </select>
                     <label class="switch-row"><span class="switch"><input type="checkbox" data-role="hasHeader" ${stage.table.hasHeader ? 'checked' : ''}><span class="track"></span><span class="thumb"></span></span>Header row</label>

@@ -944,12 +944,37 @@
                 }
             }
         });
-        tableWrap.addEventListener('dragover', (e) => { e.preventDefault(); tableWrap.classList.add('drag-over'); });
-        tableWrap.addEventListener('dragleave', () => tableWrap.classList.remove('drag-over'));
+        // ----------------------------------------------------
+        // Fitur Drag & Drop File untuk Input Table
+        // ----------------------------------------------------
+        tableWrap.addEventListener('dragover', (e) => { 
+            e.preventDefault(); 
+            tableWrap.classList.add('drag-over'); 
+        });
+
+        tableWrap.addEventListener('dragleave', () => { 
+            tableWrap.classList.remove('drag-over'); 
+        });
+
         tableWrap.addEventListener('drop', (e) => {
-            e.preventDefault(); tableWrap.classList.remove('drag-over');
+            e.preventDefault(); 
+            tableWrap.classList.remove('drag-over');
+            
             const file = e.dataTransfer.files && e.dataTransfer.files[0];
-            if (file) { file.text().then(importText); }
+            if (file) { 
+                file.text().then(text => {
+                    // importText sudah otomatis mem-parsing teks (CSV/TSV) ke dalam stage.table.rows
+                    importText(text); 
+                    
+                    if (typeof showToast === 'function') {
+                        showToast(`File ${file.name} berhasil dimuat ke tabel`);
+                    }
+                }).catch(err => {
+                    if (typeof showToast === 'function') {
+                        showToast('Gagal membaca isi file untuk tabel');
+                    }
+                });
+            }
         });
 
         delimSelect.addEventListener('change', (e) => {

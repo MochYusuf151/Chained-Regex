@@ -1275,13 +1275,13 @@
     function bindHeaderEvents() {
         titleField.value = state.title;
         descField.value = state.description;
-        docTitleLabel.textContent = state.title || 'Chained Regex Pipeline';
-        document.title = state.title ? state.title + ' · Chained Regex Pipeline' : 'Chained Regex Pipeline';
+        docTitleLabel.textContent = state.title || 'Text Transformation Pipeline';
+        document.title = state.title ? state.title + ' · Text Transformation Pipeline' : 'Text Transformation Pipeline';
 
         titleField.addEventListener('input', (e) => {
             state.title = e.target.value;
-            docTitleLabel.textContent = state.title || 'Chained Regex Pipeline';
-            document.title = state.title ? state.title + ' · Chained Regex Pipeline' : 'Chained Regex Pipeline';
+            docTitleLabel.textContent = state.title || 'Text Transformation Pipeline';
+            document.title = state.title ? state.title + ' · Text Transformation Pipeline' : 'Text Transformation Pipeline';
             persistToUrl();
         });
         descField.addEventListener('input', (e) => {
@@ -1303,8 +1303,8 @@
             params.delete('d');
             history.replaceState({}, '', window.location.pathname);
             titleField.value = ''; descField.value = '';
-            docTitleLabel.textContent = 'Chained Regex Pipeline';
-            document.title = 'Chained Regex Pipeline';
+            docTitleLabel.textContent = 'Text Transformation Pipeline';
+            document.title = 'Text Transformation Pipeline';
             renderAll();
         });
 

@@ -20,7 +20,7 @@
     --radius-card: 14px;
     --radius-field: 8px;
     --font-ui: 'Manrope', system-ui, sans-serif;
-    --font-code: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --font-code: ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
 * {
@@ -914,8 +914,3 @@ select {
     background-color: rgba(87, 224, 192, .08);; /* Warna biru muda, bisa disesuaikan */
     outline: 1px solid #1976d2; /* Garis batas agar mirip Excel */
 }
-
-[data-role="scriptField"] {
-    font-family: 'Consolas', 'Courier New', monospace;
-}
-

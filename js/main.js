@@ -118,20 +118,40 @@
             const cleanedState = {
                 ...state,
                 stages: state.stages.map(stage => {
-                    // Keluarkan properti transient yang tidak perlu di-encode
                     const { output, _computedInput, ...rest } = stage;
 
-                    // Jika stage ini TIDAK mengaktifkan saveInputToUrl, buang inputString & table.rows miliknya
+                    // Jika toggle 'Save to URL' MATI
                     if (!stage.saveInputToUrl) {
                         const { inputString, table, ...otherRest } = rest;
                         const { rows, ...tableRest } = table || {};
+                        
+                        let skeletonRows = [['col1', 'col2'], ['', '']]; // Fallback bawaan
+
+                        // Jika tabel memiliki data, buat kerangka (skeleton) kolomnya
+                        if (rows && rows.length > 0) {
+                            // Cari jumlah kolom terbanyak dari data input
+                            const colCount = Math.max(...rows.map(r => r.length));
+                            const emptyRow = new Array(colCount).fill('');
+
+                            if (tableRest.hasHeader) {
+                                // Simpan nama Header asli + 1 baris kosong untuk diisi nanti
+                                skeletonRows = [rows[0], emptyRow]; 
+                            } else {
+                                // Jika tidak ada Header, simpan 2 baris kosong dengan jumlah kolom yang sesuai
+                                skeletonRows = [emptyRow, [...emptyRow]];
+                            }
+                        }
+
                         return {
                             ...otherRest,
-                            table: tableRest
+                            table: {
+                                ...tableRest,
+                                rows: skeletonRows // Masukkan kerangka tabel, bukan data asli
+                            }
                         };
                     }
 
-                    // Jika stage ini MENGAKTIFKAN saveInputToUrl, simpan seluruh datanya
+                    // Jika toggle AKTIF, simpan data asli secara utuh
                     return rest;
                 })
             };
@@ -530,7 +550,7 @@
     const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
     const rows = stage.table.rows;
     if (!rows.length || !rows[0].length) {
-        tableWrap.innerHTML = `<div class="table-empty">No data yet.</div>`;
+        tableWrap.innerHTML = `<div class="table-empty">Paste table or drop file here</div>`;
         return;
     }
 

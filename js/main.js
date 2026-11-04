@@ -8,6 +8,7 @@
     const TEXT_FIELD_VISIBLE_CHAR_LENGTH = 100000;
     const TABLE_MAX_VISIBLE_ROWS = 50;
     const TABLE_MAX_CELL_VISIBLE_CHARS = 200;    // Batas jumlah karakter per sel di DOM
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
     let globalVar = {};
     let fnUtils = {
         transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
@@ -229,14 +230,14 @@
         return out;
     }
 
-    function runTableScriptStage(input, stage) {
+    async function runTableScriptStage(input, stage) {
         // Ensure 'g' flag is present to match all occurrences safely
         let flags = stage.regex.flags;
         if (!flags.includes('g')) flags += 'g';
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matches', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', 'fnUtils', stage.script);
+            const fn = new AsyncFunction('inputString', 'matches', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', 'fnUtils', stage.script);
             let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
             
             let outputValue = null;
@@ -244,7 +245,7 @@
             let rowIndex = 0;
 
             if (!stage.regex.search) {
-                let result = fn(input, null, null, null, null, null, stage.table, globalVar, fnUtils);
+                let result = await fn(input, null, null, null, null, null, stage.table, globalVar, fnUtils);
                 return result === undefined ? input : result;
             }
 
@@ -261,7 +262,7 @@
                     for (const group of match) {
                         if (groupIndex > 0 && group !== undefined) {
                             let inputString = group;
-                            let result = fn(inputString, matches, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, fnUtils);
+                            let result = await fn(inputString, matches, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, fnUtils);
                             // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                             matchString = matchString.replace(inputString, result);
                         }
@@ -289,21 +290,21 @@
     }
 
     
-    function runScriptStage(input, stage) {
+    async function runScriptStage(input, stage) {
         // Ensure 'g' flag is present to match all occurrences safely
         let flags = stage.regex.flags;
         if (!flags.includes('g')) flags += 'g';
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new Function('inputString', 'matches', 'matchIndex', 'groupIndex', 'globalVar', 'fnUtils', stage.script);
+            const fn = new AsyncFunction('inputString', 'matches', 'matchIndex', 'groupIndex', 'globalVar', 'fnUtils', stage.script);
             const matches = input.matchAll(globalRegex);
             let outputValue = input;
             let startStringIndex = 0;
             let matchIndex = 0;
 
             if (!stage.regex.search) {
-                let result = fn(input, null, null, null, globalVar, fnUtils);
+                let result = await fn(input, null, null, null, globalVar, fnUtils);
                 return result === undefined ? input : result;
             }
 
@@ -315,7 +316,7 @@
                 for (const group of match) {
                     if (groupIndex > 0 && group !== undefined) {
                         let inputString = group;
-                        let result = fn(inputString, matches, matchIndex, groupIndex, globalVar, fnUtils);
+                        let result = await fn(inputString, matches, matchIndex, groupIndex, globalVar, fnUtils);
                         // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                         matchString = matchString.replace(inputString, result);
                     }
@@ -336,11 +337,12 @@
         }
     }
 
-    function computeAll() {
+    async function computeAll() {
         let prevOutput = '';
         globalVar = {};
         
-        state.stages.forEach((stage, idx) => {
+        for (let idx = 0; idx < state.stages.length; idx++) {
+            const stage = state.stages[idx];
             const isUsingPrev = (idx > 0 && stage.usePreviousOutput);
             
             const source = isUsingPrev ? prevOutput
@@ -380,14 +382,14 @@
                             if (!stage.regex.search) { output = processStr; }
                             else output = runRegexStage(processStr, stage.regex);
                         } else {
-                            output = runScriptStage(processStr, stage);
+                            output = await runScriptStage(processStr, stage);
                         }
                     } else {
                         if (stage.processingMode === 'regex') {
                             if (!stage.regex.search) { output = processStr; }
                             else output = runRegexStage(processStr, stage.regex);
                         } else {
-                            output = runTableScriptStage(processStr, stage);
+                            output = await runTableScriptStage(processStr, stage);
                         }
                     }
 
@@ -401,7 +403,7 @@
             stage.output = output;
             stage.error = error;
             prevOutput = output;
-        });
+        };
         
         persistToUrl();
     }
@@ -749,12 +751,13 @@
             return; 
         }
         
-        computeAll();
-        document.querySelectorAll('.stage-wrap').forEach(wrap => {
-            const stage = state.stages.find(s => s.id === wrap.dataset.stageId);
-            if (stage) updateStageOutput(wrap, stage);
+        computeAll().then(() => {
+                document.querySelectorAll('.stage-wrap').forEach(wrap => {
+                const stage = state.stages.find(s => s.id === wrap.dataset.stageId);
+                if (stage) updateStageOutput(wrap, stage);
+            });
+            cleanComputeData();
         });
-        cleanComputeData();
     }
 
     /* ============================= Event binding ============================= */

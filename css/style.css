@@ -430,6 +430,9 @@ select {
 }
 
 .stage-name {
+    flex: 1 1 auto;          /* ambil semua sisa ruang */
+    min-width: 60px;
+    max-width: none;         /* sebelumnya 220px */
     border: 1px solid transparent;
     background: transparent;
     color: var(--text);
@@ -437,8 +440,7 @@ select {
     font-size: 14.5px;
     padding: 4px 7px;
     border-radius: 6px;
-    min-width: 60px;
-    max-width: 220px;
+    text-overflow: ellipsis; /* nama super panjang tampil "..." saat tidak fokus */
 }
 
 .stage-name:hover {
@@ -452,6 +454,8 @@ select {
 }
 
 .mode-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 11px;
     font-weight: 700;
     padding: 3px 9px;
@@ -470,10 +474,11 @@ select {
 }
 
 .stage-head-spacer {
-    flex: 1;
+    display: none;
 }
 
 .stage-head-actions {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 2px;

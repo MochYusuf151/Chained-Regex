@@ -1155,18 +1155,67 @@
     function enableTabIndent(textarea) {
         textarea.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
-                e.preventDefault(); // Mencegah browser pindah fokus
+                e.preventDefault();
 
                 const start = this.selectionStart;
                 const end = this.selectionEnd;
+                const value = this.value;
+                
+                // Pilih karakter indentasi (Bisa diubah ke "    " untuk 4 spasi)
+                const indent = "\t"; 
 
-                // Sisipkan karakter tab (\t) di posisi kursor
-                this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+                const isOutdent = e.shiftKey; // Deteksi jika Shift+Tab ditekan
 
-                // Kembalikan kursor ke posisi tepat setelah tab yang baru disisipkan
-                this.selectionStart = this.selectionEnd = start + 1;
+                // Jika teks di-blok (multi-line) ATAU Shift ditekan
+                if (start !== end || isOutdent) {
+                    
+                    // Mencegah penambahan tab pada baris kosong berikutnya jika seleksi berakhir persis di batas \n
+                    const targetEnd = (start !== end && value[end - 1] === '\n') ? end - 1 : end;
+                    
+                    // Cari posisi index ujung paling kiri (awal baris) dan ujung paling kanan (akhir baris)
+                    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                    let lineEnd = value.indexOf('\n', targetEnd);
+                    if (lineEnd === -1) lineEnd = value.length;
 
-                // Picu event 'input' agar aplikasi tahu ada perubahan teks (untuk Auto-run)
+                    // Ekstrak blok teks secara utuh berdasarkan baris, lalu pecah per baris
+                    const selectedLines = value.substring(lineStart, lineEnd);
+                    const lines = selectedLines.split('\n');
+
+                    let startOffset = 0;
+                    let endOffset = 0;
+
+                    // Proses setiap baris
+                    const newLines = lines.map((line, index) => {
+                        if (isOutdent) {
+                            // KASUS SHIFT+TAB: Hapus indentasi di awal baris jika ada
+                            if (line.startsWith(indent)) {
+                                if (index === 0) startOffset -= indent.length;
+                                endOffset -= indent.length;
+                                return line.substring(indent.length); // Hapus tab
+                            }
+                            return line;
+                        } else {
+                            // KASUS TAB BIASA (Multi-line): Tambahkan indentasi
+                            if (index === 0) startOffset += indent.length;
+                            endOffset += indent.length;
+                            return indent + line; // Sisipkan tab
+                        }
+                    });
+
+                    // Gabungkan baris kembali dan timpa teks lama
+                    this.value = value.substring(0, lineStart) + newLines.join('\n') + value.substring(lineEnd);
+
+                    // Kembalikan posisi blok seleksi (tergeser mengikuti penambahan/pengurangan tab)
+                    this.selectionStart = Math.max(0, start + startOffset);
+                    this.selectionEnd = Math.max(0, end + endOffset);
+
+                } else {
+                    // KASUS TAB BIASA (Single-line, tanpa blok): Sisipkan tepat di posisi kursor
+                    this.value = value.substring(0, start) + indent + value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + indent.length;
+                }
+
+                // Picu pipeline untuk melakukan render
                 this.dispatchEvent(new Event('input', { bubbles: true }));
             }
         });

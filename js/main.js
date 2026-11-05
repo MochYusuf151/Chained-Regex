@@ -1304,6 +1304,7 @@
         } else {
             const scriptField = wrap.querySelector('[data-role="scriptField"]');
             if (scriptField) {
+                enableTabIndent(scriptField);
                 scriptField.addEventListener('input', (e) => { stage.script = e.target.value; refreshAllOutputs(); });
             }
         }

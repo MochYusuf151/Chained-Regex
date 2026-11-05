@@ -3,7 +3,6 @@
 
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
-    let autoCompute = true;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
     const TEXT_FIELD_VISIBLE_CHAR_LENGTH = 100000;
     const TABLE_MAX_VISIBLE_ROWS = 50;
@@ -107,6 +106,7 @@
         return {
             title: '',
             description: '',
+            autoCompute: true,
             stages: [defaultStage({ collapsed: false })]
         };
     }
@@ -713,6 +713,12 @@
             pipelineEl.removeChild(pipelineEl.firstChild); // Pelepasan DOM node secara eksplisit
         }
 
+        const autoComputeToggle = document.getElementById('autoComputeToggle'); // Sesuaikan dengan ID atau selector toggle Auto-run Anda
+        if (autoComputeToggle) {
+            // Jika tidak didefinisikan (misal URL lama), anggap default-nya true
+            autoComputeToggle.checked = state.autoCompute !== false; 
+        }
+
         state.stages.forEach((stage, idx) => {
             const wrap = renderStage(stage, idx);
             wrap.dataset.hasPrev = idx > 0 ? '1' : '0';
@@ -735,8 +741,8 @@
         }, 0);
 
         // Matikan Auto-run jika karakter lebih dari AUTO_COMPUTE_CHAR_LIMIT dan posisi sakelar sedang aktif
-        if (totalChars > AUTO_COMPUTE_CHAR_LIMIT && autoCompute) {
-            autoCompute = false;
+        if (totalChars > AUTO_COMPUTE_CHAR_LIMIT && state.autoCompute) {
+            state.autoCompute = false;
             autoToggle.checked = false;
             showToast(`Auto-run disabled (Input > ${AUTO_COMPUTE_CHAR_LIMIT} characters)`);
         }
@@ -747,7 +753,7 @@
         checkAutoComputeLimit();
 
         // Jika Auto-run mati dan tidak dipicu tombol manual, batalkan pemrosesan
-        if (!autoCompute && !force) {
+        if (!state.autoCompute && !force) {
             return; 
         }
         
@@ -1421,8 +1427,9 @@
         });
 
         document.getElementById('autoComputeToggle').addEventListener('change', (e) => {
-            autoCompute = e.target.checked;
-            if (autoCompute) refreshAllOutputs(true);
+            state.autoCompute = e.target.checked;
+            persistToUrl();
+            if (state.autoCompute) refreshAllOutputs(true);
         });
 
         document.getElementById('runPipelineBtn').addEventListener('click', () => {

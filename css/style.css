@@ -329,6 +329,8 @@ select {
     resize: vertical;
     min-height: 76px;
     line-height: 1.5;
+    -moz-tab-size: 4; /* Untuk Firefox */
+    tab-size: 4;      /* Untuk Chrome/Edge/Safari. Ubah ke 2 jika ingin lebih rapat */
 }
 
 .input.mono,

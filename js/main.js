@@ -872,6 +872,7 @@
         if (stage.inputMode === 'text') {
             const field = wrap.querySelector('[data-role="inputField"]');
             if (field) {
+                enableTabIndent(field);
                 // Event ketika pengguna mengetik biasa
                 field.addEventListener('input', (e) => {
                     stage.inputString = e.target.value;
@@ -1148,6 +1149,26 @@
             if (!cell) return;
 
             handleCellPaste(cell, e, wrap, stage);
+        });
+    }
+
+    function enableTabIndent(textarea) {
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault(); // Mencegah browser pindah fokus
+
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+
+                // Sisipkan karakter tab (\t) di posisi kursor
+                this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+
+                // Kembalikan kursor ke posisi tepat setelah tab yang baru disisipkan
+                this.selectionStart = this.selectionEnd = start + 1;
+
+                // Picu event 'input' agar aplikasi tahu ada perubahan teks (untuk Auto-run)
+                this.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         });
     }
 

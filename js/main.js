@@ -933,29 +933,10 @@
         const clearDataBtn = wrap.querySelector('[data-role="clearData"]');
         const copyBtn = wrap.querySelector('[data-role="copyTable"]');
 
-        function importText(text) {
-            const { rows, delimiter } = parseDelimited(text, stage.table.delimiter);
-            
-            // Cegah penimpaan jika opsi Header aktif dan tabel sudah punya data
-            if (stage.table.hasHeader && stage.table.rows.length > 0) {
-                const preservedHeader = stage.table.rows[0]; // Simpan header lama
-                
-                // Gabungkan header lama dengan data baru yang di-paste
-                // (Data baru akan ditambahkan mulai dari baris ke-1 ke bawah)
-                stage.table.rows = [preservedHeader, ...rows];
-            } else {
-                // Jika tidak ada header, timpa keseluruhan seperti biasa
-                stage.table.rows = rows;
-            }
-
-            renderTable(wrap, stage);
-            refreshAllOutputs();
-        }
-
         pasteBtn.addEventListener('click', async () => {
             try {
                 const text = await navigator.clipboard.readText();
-                if (text) importText(text);
+                if (text) importText(text, wrap, stage);
                 else showToast('Clipboard is empty');
             } catch (err) {
                 showToast('Clipboard access blocked — try pasting (Ctrl/Cmd+V) into the table instead');
@@ -969,11 +950,11 @@
             }
         });
 
-        tableWrap.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text');
-            if (text) importText(text);
-        });
+        // tableWrap.addEventListener('paste', (e) => {
+        //     e.preventDefault();
+        //     const text = (e.clipboardData || window.clipboardData).getData('text');
+        //     if (text) importText(text, wrap, stage);
+        // });
         tableWrap.addEventListener('keydown', (e) => { // copy selection range to clipboard in delimited format
             const isKeyC = e.key.toLowerCase() === 'c';
             
@@ -1027,7 +1008,7 @@
             if (file) { 
                 file.text().then(text => {
                     // importText sudah otomatis mem-parsing teks (CSV/TSV) ke dalam stage.table.rows
-                    importText(text); 
+                    importText(text, wrap, stage); 
                     
                     if (typeof showToast === 'function') {
                         showToast(`File ${file.name} berhasil dimuat ke tabel`);
@@ -1152,9 +1133,13 @@
         // ---------------- 3. Delegation Event PASTE ----------------
         tw.addEventListener('paste', (e) => {
             const cell = e.target.closest('.cell');
-            if (!cell) return;
-
-            handleCellPaste(cell, e, wrap, stage);
+            if (!cell) {
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                if (text)
+                    importText(text, wrap, stage);
+            } else {
+                handleCellPaste(cell, e, wrap, stage);
+            }
         });
     }
 
@@ -1257,6 +1242,25 @@
         });
     }
 
+    function importText(text, wrap, stage) {
+        const { rows, delimiter } = parseDelimited(text, stage.table.delimiter);
+        
+        // Cegah penimpaan jika opsi Header aktif dan tabel sudah punya data
+        if (stage.table.hasHeader && stage.table.rows.length > 0) {
+            const preservedHeader = stage.table.rows[0]; // Simpan header lama
+            
+            // Gabungkan header lama dengan data baru yang di-paste
+            // (Data baru akan ditambahkan mulai dari baris ke-1 ke bawah)
+            stage.table.rows = [preservedHeader, ...rows];
+        } else {
+            // Jika tidak ada header, timpa keseluruhan seperti biasa
+            stage.table.rows = rows;
+        }
+
+        renderTable(wrap, stage);
+        refreshAllOutputs();
+    }
+
     function handleCellPaste(cell, e, wrap, stage) {
         e.stopPropagation();
         e.preventDefault();
@@ -1264,23 +1268,42 @@
         const text = (e.clipboardData || window.clipboardData).getData('text');
         if (!text) return;
 
+        const table = stage.table;
         const r0 = parseInt(cell.dataset.row, 10);
         const c0 = parseInt(cell.dataset.col, 10);
-        
-        const { rows: pastedRows } = parseDelimited(text, stage.table.delimiter);
+        if (Number.isNaN(r0) || Number.isNaN(c0)) return;
 
-        // --- KASUS 1: Paste Teks Single Cell ---
-        // Jangan ubah sel jika itu adalah bagian dari header (r0 === 0)
+        const parsed = parseDelimited(text, table.delimiter);
+        let pastedRows = parsed.rows;
+
+        console.log('[paste] raw:', JSON.stringify(text));
+        console.log('[paste] delimiter:', JSON.stringify(table.delimiter));
+        console.log('[paste] r0,c0:', r0, c0, 'hasHeader:', table.hasHeader);
+        console.log('[paste] parsed:', JSON.stringify(pastedRows));
+        // ...dan tepat sebelum renderTable(wrap, stage):
+        console.log('[paste] rows after:', JSON.stringify(table.rows));
+
+        // Buang baris trailing kosong (umum dari Excel/Sheets: teks diakhiri newline)
+        while (
+            pastedRows.length > 1 &&
+            pastedRows[pastedRows.length - 1].every(v => v === '' || v == null)
+        ) {
+            pastedRows = pastedRows.slice(0, -1);
+        }
+        if (!pastedRows.length) return;
+
+        const isHeaderRow = table.hasHeader && r0 === 0;
+
+        // --- KASUS 1: Paste single cell ---
         if (pastedRows.length === 1 && pastedRows[0].length === 1) {
-            if (stage.table.hasHeader && r0 === 0) {
-                // Abaikan paste pada header untuk single cell
+            if (isHeaderRow) {
                 if (typeof showToast === 'function') showToast('Header tidak bisa diubah lewat paste');
-                return; 
+                return;
             }
 
             const val = pastedRows[0][0];
             const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
+            if (selection && selection.rangeCount > 0) {
                 const range = selection.getRangeAt(0);
                 range.deleteContents();
                 range.insertNode(document.createTextNode(val));
@@ -1290,34 +1313,39 @@
             return;
         }
 
-        // --- KASUS 2: Paste Data Multi-Baris/Multi-Kolom ---
-        
-        // Geser titik paste ke baris 1 (data pertama) jika user mencoba paste tepat di baris header
-        let startRow = r0;
-        if (stage.table.hasHeader && r0 === 0) {
-            startRow = 1;
-        }
+        // --- KASUS 2: Paste multi baris/kolom (timpa ke kanan & ke bawah) ---
+        const startRow = isHeaderRow ? 1 : r0;
+
+        // Pastikan baris ada, tanpa membuat array berlubang
+        const ensureRow = (rr) => {
+            while (table.rows.length <= rr) table.rows.push([]);
+            return table.rows[rr];
+        };
 
         pastedRows.forEach((row, ri) => {
-            row.forEach((val, ci) => {
-                const rr = startRow + ri; // Gunakan startRow yang sudah digeser
-                const cc = c0 + ci;
-                
-                // Perlindungan ganda: Jangan pernah timpa index 0 jika ada header
-                if (stage.table.hasHeader && rr === 0) return;
+            const rr = startRow + ri;
+            if (table.hasHeader && rr === 0) return; // header tidak disentuh
 
-                if (!stage.table.rows[rr]) stage.table.rows[rr] = [];
-                stage.table.rows[rr][cc] = val;
+            const targetRow = ensureRow(rr);
+
+            row.forEach((val, ci) => {
+                const cc = c0 + ci;
+                // Isi slot kosong di kiri dengan '' agar tidak ada lubang,
+                // tapi JANGAN mengubah nilai yang sudah ada
+                for (let k = targetRow.length; k < cc; k++) targetRow[k] = '';
+                targetRow[cc] = val; // hanya sel yang dipaste yang ditimpa
             });
         });
 
-        // Ratakan jumlah kolom agar tidak ada undefined
-        const maxCols = Math.max(...stage.table.rows.map(r => r.length));
-        stage.table.rows.forEach(r => {
+        // Ratakan jumlah kolom (tanpa spread agar aman untuk data besar)
+        let maxCols = 0;
+        for (const r of table.rows) if (r.length > maxCols) maxCols = r.length;
+
+        for (const r of table.rows) {
             for (let i = 0; i < maxCols; i++) {
                 if (r[i] === undefined) r[i] = '';
             }
-        });
+        }
 
         renderTable(wrap, stage);
         refreshAllOutputs();

@@ -1276,13 +1276,6 @@
         const parsed = parseDelimited(text, table.delimiter);
         let pastedRows = parsed.rows;
 
-        console.log('[paste] raw:', JSON.stringify(text));
-        console.log('[paste] delimiter:', JSON.stringify(table.delimiter));
-        console.log('[paste] r0,c0:', r0, c0, 'hasHeader:', table.hasHeader);
-        console.log('[paste] parsed:', JSON.stringify(pastedRows));
-        // ...dan tepat sebelum renderTable(wrap, stage):
-        console.log('[paste] rows after:', JSON.stringify(table.rows));
-
         // Buang baris trailing kosong (umum dari Excel/Sheets: teks diakhiri newline)
         while (
             pastedRows.length > 1 &&

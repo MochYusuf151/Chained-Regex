@@ -1183,6 +1183,12 @@
         const clearBtn = wrap.querySelector('[data-role="clearTable"]');
         const clearDataBtn = wrap.querySelector('[data-role="clearData"]');
         const copyBtn = wrap.querySelector('[data-role="copyTable"]');
+        const usePrev = wrap.querySelector('[data-role="usePrev"]');
+        const inputTableButtons = [ pasteBtn, addRowBtn, addColBtn, clearBtn, clearDataBtn ];
+        inputTableButtons.forEach(btn => {
+                btn.disabled = usePrev.checked;
+            }
+        )
 
         pasteBtn.addEventListener('click', async () => {
             try {
@@ -1756,10 +1762,13 @@
     const ANIMATION_TRANSITION = 1800;
 
     let shimmerAnimation;
+    let btnShimmerAnimation;
 
     function setPipelineRunning(isRunning) {
         isPipelineRunning = isRunning;
 
+        if (!btnShimmerAnimation)
+            btnShimmerAnimation = document.getAnimations().find(a => a.animationName === 'btn-shimmer') || null;
         runPipelineBtn.classList.toggle('is-running', isRunning);
         runPipelineBtn.setAttribute('aria-busy', String(isRunning));
         runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline (F8)';
@@ -1770,6 +1779,9 @@
             clearTimeout(startToStopTimer);            // batalkan stop yang tertunda
             document.body.classList.toggle('running', true)
             document.body.classList.toggle('stopping', false);
+            runPipelineBtn.classList.toggle('is-running', isRunning);
+            runPipelineBtn.setAttribute('aria-busy', String(isRunning));
+            runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline (F8)';
         } else {
             const remaining = Math.max(0, MIN_RUNNING_BG_MS - (performance.now() - startedRunningAt));
             const remainingStopping = Math.max(0, MIN_RUNNING_BG_MS - ANIMATION_TRANSITION - (performance.now() - startedRunningAt));
@@ -1779,6 +1791,7 @@
                 shimmerAnimation = document.getAnimations().find(a => a.animationName === 'dot-shimmer') || null;
             startToStopTimer = setTimeout(() => {
                 document.body.classList.toggle('stopping', true);
+                btnShimmerAnimation.currentTime = 0;
             }, remainingStopping);
             stopTimer = setTimeout(() => {
                 document.body.classList.toggle('stopping', false);

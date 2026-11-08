@@ -646,7 +646,7 @@
 
         if (isTruncatedRows) {
             html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
-                Showing <b>${tableMaxVisibleRows}</b> of <b>${rows.length}</b> lines (all lines is still processed on Run).
+                Showing <b>${tableMaxVisibleRows}</b> of <b>${rows.length?.toLocaleString('en-US')}</b> lines (all lines is still processed on Run).
             </div>`;
         }
 
@@ -691,12 +691,20 @@
   `;
     }
 
-    function updateCounts(wrap, stage) {
+    function updateInputCounts(wrap, stage) {
         const inputCount = wrap.querySelector('[data-role="inputCount"]');
+        let source = stage.inputString || '';
+        const isUsingPrev = (stage.usePreviousOutput && state.stages[0] != stage);
+        if (isUsingPrev)
+            source = stage._computedInput || '';
+        if (inputCount) inputCount.innerHTML = `<b>${countLines(source)}</b> lines · <b>${source.length?.toLocaleString('en-US')}</b> chars`;
+    }
+
+    function updateCounts(wrap, stage) {
+        updateInputCounts(wrap, stage);
         const outputCount = wrap.querySelector('[data-role="outputCount"]');
-        const source = stage._computedInput || '';
-        if (inputCount) inputCount.innerHTML = `<b>${countLines(source)}</b> lines · <b>${source.length}</b> chars`;
-        if (outputCount) outputCount.innerHTML = `<b>${countLines((stage.output || ''))}</b> lines · <b>${(stage.output || '').length}</b> chars`;
+        if (outputCount) outputCount.innerHTML = `<b>${countLines((stage.output || ''))}</b> lines · <b>${(stage.output || '').length?.toLocaleString('en-US')}</b> chars`;
+        
     }
 
     function countLines(text) {
@@ -707,7 +715,7 @@
         while ((pos = text.indexOf('\n', pos + 1)) !== -1) {
             count++;
         }
-        return count;
+        return count.toLocaleString('en-US');
     }
 
     function updateStageOutput(wrap, stage) {
@@ -722,7 +730,7 @@
                 const fullOutput = stage.output || '';
                 if (fullOutput.length > textFieldVisibleCharLength) {
                     outField.value = fullOutput.substring(0, textFieldVisibleCharLength) + 
-                        `\n\n... [Output truncated. Total: ${fullOutput.length} characters. Use "Copy" button to copy full data]`;
+                        `\n\n... [Output truncated. Total: ${fullOutput.length?.toLocaleString('en-US')} characters. Use "Copy" button to copy full data]`;
                 } else {
                     outField.value = fullOutput;
                 }
@@ -741,7 +749,7 @@
             if (inField) {
                 const fullInput = stage._computedInput || '';
                 const displayInput = fullInput.length > textFieldVisibleCharLength 
-                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
+                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length?.toLocaleString('en-US')}<} characters.]`
                     : fullInput;
                 
                 if (inField.value !== displayInput) {
@@ -981,24 +989,79 @@
             if (field) {
                 enableTabIndent(field);
 
-                // Event ketika paste
+                // ---------- Helper ----------
+                const truncMarker = (total) =>
+                    `\n\n... [Input preview truncated. Total: ${total?.toLocaleString('en-US')} characters.]`;
+
+                // Tampilkan teks ke field (dipotong jika big data). Return true jika terpotong.
+                const renderField = (full) => {
+                    const truncated = state.bigData && full.length > textFieldVisibleCharLength;
+                    field.value = truncated
+                        ? full.substring(0, textFieldVisibleCharLength) + truncMarker(full.length)
+                        : full;
+                    field.dataset.truncated = truncated ? '1' : '0';
+                    return truncated;
+                };
+
+                // Terapkan teks penuh baru: simpan ke state, cek big data, render preview
+                const applyFullInput = (full) => {
+                    stage.inputString = full;
+                    checkBigDataMode();
+                    return renderField(full);
+                };
+
+                // ---------- Paste ----------
                 field.addEventListener('paste', (e) => {
                     e.preventDefault();
-                    const isUsingPrev = (state.stages[0] != stage && stage.usePreviousOutput);
-                    if (isUsingPrev)
-                        return;
 
-                    const fullInput = (e.clipboardData || window.clipboardData).getData('text');
-                    stage.inputString = fullInput;
-                    checkBigDataMode();
-                    
-                    const displayInput = fullInput.length > textFieldVisibleCharLength && state.bigData
-                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
-                    : fullInput;
+                    const isUsingPrev = (state.stages[0] !== stage && stage.usePreviousOutput);
+                    if (isUsingPrev) return;
 
-                    field.value = displayInput;
+                    // Validasi isi clipboard
+                    const clip = (e.clipboardData || window.clipboardData)?.getData('text');
+                    if (typeof clip !== 'string' || clip.length === 0) return;
+                    const pasted = clip.replace(/\r\n?/g, '\n'); // normalisasi line ending
+
+                    const wasTruncated = field.dataset.truncated === '1';
+                    const limit = textFieldVisibleCharLength;
+
+                    // Teks penuh saat ini (kalau preview terpotong, ambil dari state)
+                    const current = wasTruncated ? (stage.inputString || '') : field.value;
+
+                    // Posisi cursor / selection di field
+                    let start = field.selectionStart;
+                    let end = field.selectionEnd;
+
+                    if (wasTruncated) {
+                        const selectAll = start === 0 && end === field.value.length;
+                        if (selectAll) {
+                            // Ctrl+A lalu paste = ganti semua isi
+                            start = 0;
+                            end = current.length;
+                        } else {
+                            // Posisi di area marker dipetakan ke ujung preview,
+                            // sehingga teks tersembunyi tidak ikut terhapus
+                            start = Math.min(start, limit);
+                            end = Math.min(end, limit);
+                        }
+                    } else {
+                        start = Math.min(start, current.length);
+                        end = Math.min(end, current.length);
+                    }
+
+                    // Sisipkan di posisi cursor (ganti selection bila ada)
+                    const newFull = current.slice(0, start) + pasted + current.slice(end);
+                    const nowTruncated = applyFullInput(newFull);
+
+                    // Taruh cursor tepat setelah teks yang di-paste
+                    let caret = start + pasted.length;
+                    if (nowTruncated) caret = Math.min(caret, limit);
+                    field.setSelectionRange(caret, caret);
+
+                    updateInputCounts(wrap, stage);
                     refreshAllOutputs();
                 });
+
 
 
                 // Event ketika pengguna mengetik biasa
@@ -1008,6 +1071,8 @@
                         stage.inputString = e.target.value;
                     else
                         field.value = stage.inputString;
+
+                    updateInputCounts(wrap, stage);
                     refreshAllOutputs();
                 });
 
@@ -1034,6 +1099,7 @@
                         file.text().then(text => {
                             field.value = text;              // Tampilkan di UI
                             stage.inputString = text;        // Simpan ke state global
+                            updateInputCounts(wrap, stage);
                             refreshAllOutputs();             // Jalankan pipeline
                             if (typeof showToast === 'function') {
                                 showToast(`File ${file.name} berhasil dimuat`);

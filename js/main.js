@@ -1058,6 +1058,10 @@
                     if (nowTruncated) caret = Math.min(caret, limit);
                     field.setSelectionRange(caret, caret);
 
+                    if (nowTruncated) {
+                        showToast(`Preview of text is truncated to ${textFieldVisibleCharLength.toLocaleString('en-US')} characters (Original Data is still processed)`);
+                    }
+
                     updateInputCounts(wrap, stage);
                     refreshAllOutputs();
                 });
@@ -1685,12 +1689,43 @@
     const yieldToUI = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
     let toastTimer;
+    const toastQueue = [];
+    let toastActive = false;
+    // toastTimer tetap dipakai dari variabel yang sudah ada
+
+    const TOAST_DURATION = 3000; // lama toast tampil (ms)
+    const TOAST_GAP = 250;       // jeda untuk animasi fade-out, samakan dengan transition CSS #toast
+
     function showToast(msg) {
+        toastQueue.push(String(msg));
+        if (!toastActive) processToastQueue();
+    }
+
+    function processToastQueue() {
         const toast = document.getElementById('toast');
+
+        // Antrean habis (atau elemen toast tidak ada): berhenti
+        if (!toast || toastQueue.length === 0) {
+            toastActive = false;
+            return;
+        }
+
+        toastActive = true;
+        const msg = toastQueue.shift();
+
         toast.textContent = msg;
         toast.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+
+        // Kalau antrean menumpuk, durasi dipercepat supaya tidak tertinggal lama,
+        // tapi semua pesan tetap ditampilkan.
+        const pending = toastQueue.length;
+        const duration = pending >= 5 ? 900 : pending >= 3 ? 1300 : TOAST_DURATION;
+
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+            // Tunggu fade-out selesai, baru tampilkan toast berikutnya
+            toastTimer = setTimeout(processToastQueue, TOAST_GAP);
+        }, duration);
     }
 
     /* ============================= Init ============================= */

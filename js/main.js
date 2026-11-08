@@ -1733,8 +1733,15 @@
     /* ============================= Init ============================= */
     function init() {
         state = loadFromUrl();
+        window.addEventListener('hashchange', reloadUrl);
         bindHeaderEvents();
         renderAll();
     }
+
+    function reloadUrl() {
+        state = loadFromUrl();
+        renderAll();
+    }
+
     init();
 })();

@@ -1,6 +1,9 @@
 :root {
     --bg: #12141a;
     --bg-grid: #171a21;
+    --bg-base: #0b0e13;
+    --glow-mint: 94, 234, 212;
+    --glow-violet: 139, 115, 255;
     --panel: #1b1e27;
     --panel-alt: #20242f;
     --panel-raised: #262b38;
@@ -31,17 +34,73 @@ html,
 body {
     margin: 0;
     padding: 0;
+    background: var(--bg-base);
 }
 
 body {
-    background:
+    background: transparent;
+    /* background:
         radial-gradient(1200px 600px at 15% -10%, rgba(87, 224, 192, .06), transparent 60%),
         radial-gradient(900px 500px at 100% 0%, rgba(156, 140, 247, .05), transparent 55%),
-        var(--bg);
+        var(--bg); */
     color: var(--text);
     font-family: var(--font-ui);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(var(--glow-mint), 0.10), transparent 60%),
+    radial-gradient(800px 500px at 92% 8%, rgba(var(--glow-violet), 0.10), transparent 60%),
+    radial-gradient(1000px 600px at 50% 110%, rgba(var(--glow-mint), 0.05), transparent 65%),
+    var(--bg-base);
+}
+
+
+/* Lapisan pola titik, memudar ke bawah */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+          mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+}
+
+/* Lapisan glow */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(var(--glow-mint), 0.10), transparent 60%),
+    radial-gradient(800px 500px at 92% 8%, rgba(var(--glow-violet), 0.10), transparent 60%),
+    radial-gradient(1000px 600px at 50% 110%, rgba(var(--glow-mint), 0.05), transparent 65%),
+    var(--bg-base);
+}
+
+/* Lapisan pola titik, memudar ke bawah */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+          mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
 }
 
 ::selection {

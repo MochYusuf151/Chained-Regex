@@ -836,6 +836,21 @@
                 textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
                 tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
                 tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL;
+                state.stages.forEach(stage => {
+                    // clean all computed data
+                    if (stage.usePreviousOutput && state.stages[0] != stage)
+                        stage.inputString = '';
+                        stage._computedInput = '';
+                        if (stage.table.hasHeader && stage.table.rows.length > 0) {
+                            const preservedHeader = stage.table.rows[0];
+                            const emptyRow = new Array(preservedHeader.length).fill(''); // Buat 1 baris kosong di bawah header
+                            
+                            stage.table.rows = [preservedHeader, emptyRow];
+                        } else {
+                            // Jika tidak ada header, hapus bersih seperti biasa
+                            stage.table.rows = [];
+                        }
+                })
                 renderAll();
             } else {
                 state.bigData = true;
@@ -852,6 +867,8 @@
 
         // Hitung total karakter dari seluruh stage yang ada
         const totalChars = state.stages.reduce((acc, stage) => {
+            if (stage.usePreviousOutput && state.stages[0] != stage) // filter non input
+                return acc;
             const src = stage.inputMode === 'table'
                 ? serializeDelimited(stage.table.rows, stage.table.delimiter)
                 : (stage.inputString || '');

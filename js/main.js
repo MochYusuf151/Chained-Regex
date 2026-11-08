@@ -3,10 +3,22 @@
 
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
+    let isPipelineRunning = false;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
-    const TEXT_FIELD_VISIBLE_CHAR_LENGTH = 100000;
-    const TABLE_MAX_VISIBLE_ROWS = 50;
-    const TABLE_MAX_CELL_VISIBLE_CHARS = 200;    // Batas jumlah karakter per sel di DOM
+
+    const TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL = 50000;
+    const TABLE_MAX_VISIBLE_ROWS_NORMAL = 50;
+    const TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL = 200;    // Batas jumlah karakter per sel di DOM
+
+    const TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA = 5000;
+    const TABLE_MAX_VISIBLE_ROWS_BIG_DATA = 10;
+    const TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA = 50;    // Batas jumlah karakter per sel di DOM
+
+    let textFieldVisibleCharLength = 50000;
+    let tableMaxVisibleRows = 50;
+    let tableMaxCellVisibleChars = 200;    // Batas jumlah karakter per sel di DOM
+
+    const BIG_DATA_COMPUTE_CHAR_MINIMAL = 500000;
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
     let globalVar = {};
     let fnUtils = {
@@ -107,6 +119,7 @@
             title: '',
             description: '',
             autoCompute: true,
+            bigData: false,
             stages: [defaultStage({ collapsed: false })]
         };
     }
@@ -340,6 +353,8 @@
     async function computeAll() {
         let prevOutput = '';
         globalVar = {};
+
+        await yieldToUI();
         
         for (let idx = 0; idx < state.stages.length; idx++) {
             const stage = state.stages[idx];
@@ -393,6 +408,11 @@
                         }
                     }
 
+                    // console.log(`data size for stage ${idx}:
+                    //     - globalVar: ${calculateDataSize(globalVar)}
+                    //     - inputString: ${calculateStringSize(stage.inputString)}
+                    //     - outputString: ${calculateStringSize(output)}`)
+
                     output = headerPrefix + output;
                 }
             } catch (err) {
@@ -403,9 +423,20 @@
             stage.output = output;
             stage.error = error;
             prevOutput = output;
+
+            await yieldToUI();
         };
         
         persistToUrl();
+    }
+
+    function calculateDataSize(objectToMeasure){
+        // Ukuran sebagai teks JSON (byte UTF-8)
+        return new Blob([JSON.stringify(objectToMeasure)]).size.toLocaleString('en-US');
+    }
+
+    function calculateStringSize(string){
+        return new TextEncoder().encode(string).length.toLocaleString('en-US');
     }
 
     function cleanComputeData () {
@@ -538,9 +569,10 @@
 
     function renderInputArea(wrap, stage) {
         const area = wrap.querySelector('[data-role="inputArea"]');
+        // const isUsingPrev = (state.stage[0] == stage && stage.usePreviousOutput);
         if (stage.inputMode === 'text') {
             area.innerHTML = `
-                <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste, type input, or drag text file here text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'disabled' : ''}></textarea>
+                <textarea class="textarea mono" data-role="inputField" rows="3" placeholder="Paste, type input, or drag text file here text&hellip;" ${stage.usePreviousOutput && wrap.dataset.hasPrev === '1' ? 'readonly' : ''}></textarea>
                 <div class="io-count" data-role="inputCount"></div>
             `;
             area.querySelector('[data-role="inputField"]').value = stage.inputString;
@@ -569,55 +601,55 @@
     }
 
     function renderTable(wrap, stage) {
-    const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
-    const rows = stage.table.rows;
-    if (!rows.length || !rows[0].length) {
-        tableWrap.innerHTML = `<div class="table-empty">Paste table or drop file here</div>`;
-        return;
-    }
+        const tableWrap = wrap.querySelector('[data-role="tableWrap"]');
+        const rows = stage.table.rows;
+        if (!rows.length || !rows[0].length) {
+            tableWrap.innerHTML = `<div class="table-empty">Paste table or drop file here</div>`;
+            return;
+        }
 
-    const isTruncatedRows = rows.length > TABLE_MAX_VISIBLE_ROWS;
-    const visibleRows = rows.slice(0, TABLE_MAX_VISIBLE_ROWS);
-    const colCount = Math.max(...rows.map(r => r.length));
+        const isTruncatedRows = rows.length > tableMaxVisibleRows;
+        const visibleRows = rows.slice(0, tableMaxVisibleRows);
+        const colCount = Math.max(...rows.map(r => r.length));
 
-    let html = '<table class="pipeline-table"><tbody>';
-    html += '<tr><td class="rowhandle"></td>';
-    for (let c = 0; c < colCount; c++) {
-        html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
-    }
-    html += '</tr>';
-
-    visibleRows.forEach((row, r) => {
-        const isHeaderRow = stage.table.hasHeader && r === 0;
-        html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
-        
+        let html = '<table class="pipeline-table"><tbody>';
+        html += '<tr><td class="rowhandle"></td>';
         for (let c = 0; c < colCount; c++) {
-            const tag = isHeaderRow ? 'th' : 'td';
-            const rawVal = row[c] != null ? String(row[c]) : '';
-            
-            // Potong teks jika melebihi batas TABLE_MAX_CELL_VISIBLE_CHARS
-            const isTruncatedCell = rawVal.length > TABLE_MAX_CELL_VISIBLE_CHARS;
-            const displayVal = isTruncatedCell 
-                ? rawVal.substring(0, TABLE_MAX_CELL_VISIBLE_CHARS) + '…' 
-                : rawVal;
-
-            const editable = (stage.id != state.stages[0]?.id && stage.usePreviousOutput) ? 'false' : 'true';
-            const tooltip = isTruncatedCell ? `title="Dipotong untuk tampilan (Total: ${rawVal.length} karakter)"` : '';
-
-            html += `<${tag} class="cell" contenteditable="${editable}" data-row="${r}" data-col="${c}" ${tooltip}>${escapeHtml(displayVal)}</${tag}>`;
+            html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
         }
         html += '</tr>';
-    });
-    html += '</tbody></table>';
 
-    if (isTruncatedRows) {
-        html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
-            Showing <b>${TABLE_MAX_VISIBLE_ROWS}</b> of <b>${rows.length}</b> lines (all lines is still processed on Run).
-        </div>`;
+        visibleRows.forEach((row, r) => {
+            const isHeaderRow = stage.table.hasHeader && r === 0;
+            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
+            
+            for (let c = 0; c < colCount; c++) {
+                const tag = isHeaderRow ? 'th' : 'td';
+                const rawVal = row[c] != null ? String(row[c]) : '';
+                
+                // Potong teks jika melebihi batas tableMaxCellVisibleChars
+                const isTruncatedCell = rawVal.length > tableMaxCellVisibleChars;
+                const displayVal = isTruncatedCell 
+                    ? rawVal.substring(0, tableMaxCellVisibleChars) + '…' 
+                    : rawVal;
+
+                const editable = (stage.id != state.stages[0]?.id && stage.usePreviousOutput) ? 'false' : 'true';
+                const tooltip = isTruncatedCell ? `title="Dipotong untuk tampilan (Total: ${rawVal.length} karakter)"` : '';
+
+                html += `<${tag} class="cell" contenteditable="${editable}" data-row="${r}" data-col="${c}" ${tooltip}>${escapeHtml(displayVal)}</${tag}>`;
+            }
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+
+        if (isTruncatedRows) {
+            html += `<div style="padding: 8px; text-align: center; font-size: 11.5px; color: var(--text-faint); background: var(--panel);">
+                Showing <b>${tableMaxVisibleRows}</b> of <b>${rows.length}</b> lines (all lines is still processed on Run).
+            </div>`;
+        }
+
+        tableWrap.innerHTML = html;
     }
-
-    tableWrap.innerHTML = html;
-}
 
     function renderProcessingArea(wrap, stage) {
         const area = wrap.querySelector('[data-role="processingArea"]');
@@ -661,8 +693,19 @@
         const inputCount = wrap.querySelector('[data-role="inputCount"]');
         const outputCount = wrap.querySelector('[data-role="outputCount"]');
         const source = stage._computedInput || '';
-        if (inputCount) inputCount.innerHTML = `<b>${source.split('\n').length}</b> lines · <b>${source.length}</b> chars`;
-        if (outputCount) outputCount.innerHTML = `<b>${(stage.output || '').split('\n').length}</b> lines · <b>${(stage.output || '').length}</b> chars`;
+        if (inputCount) inputCount.innerHTML = `<b>${countLines(source)}</b> lines · <b>${source.length}</b> chars`;
+        if (outputCount) outputCount.innerHTML = `<b>${countLines((stage.output || ''))}</b> lines · <b>${(stage.output || '').length}</b> chars`;
+    }
+
+    function countLines(text) {
+        if (text.length === 0) return 0;
+
+        let count = 1;                     // baris terakhir tanpa \n tetap dihitung
+        let pos = -1;
+        while ((pos = text.indexOf('\n', pos + 1)) !== -1) {
+            count++;
+        }
+        return count;
     }
 
     function updateStageOutput(wrap, stage) {
@@ -675,8 +718,8 @@
                 outField.value = '';
             } else {
                 const fullOutput = stage.output || '';
-                if (fullOutput.length > TEXT_FIELD_VISIBLE_CHAR_LENGTH) {
-                    outField.value = fullOutput.substring(0, TEXT_FIELD_VISIBLE_CHAR_LENGTH) + 
+                if (fullOutput.length > textFieldVisibleCharLength) {
+                    outField.value = fullOutput.substring(0, textFieldVisibleCharLength) + 
                         `\n\n... [Output truncated. Total: ${fullOutput.length} characters. Use "Copy" button to copy full data]`;
                 } else {
                     outField.value = fullOutput;
@@ -691,11 +734,12 @@
 
         // 2. Update elemen Input jika 'Use previous output' aktif
         if (stage.inputMode === 'text' && stage.usePreviousOutput && wrap.dataset.hasPrev === '1') {
+        // if (stage.inputMode === 'text') {
             const inField = wrap.querySelector('[data-role="inputField"]');
             if (inField) {
                 const fullInput = stage._computedInput || '';
-                const displayInput = fullInput.length > TEXT_FIELD_VISIBLE_CHAR_LENGTH 
-                    ? fullInput.substring(0, TEXT_FIELD_VISIBLE_CHAR_LENGTH) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
+                const displayInput = fullInput.length > textFieldVisibleCharLength 
+                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
                     : fullInput;
                 
                 if (inField.value !== displayInput) {
@@ -713,10 +757,16 @@
             pipelineEl.removeChild(pipelineEl.firstChild); // Pelepasan DOM node secara eksplisit
         }
 
-        const autoComputeToggle = document.getElementById('autoComputeToggle'); // Sesuaikan dengan ID atau selector toggle Auto-run Anda
+        const autoComputeToggle = document.getElementById('autoComputeToggle');
         if (autoComputeToggle) {
             // Jika tidak didefinisikan (misal URL lama), anggap default-nya true
             autoComputeToggle.checked = state.autoCompute !== false; 
+        }
+
+        const bigDataToggle = document.getElementById('bigDataToggle')
+        if (bigDataToggle) {
+            // Jika tidak didefinisikan (misal URL lama), anggap default-nya false
+            bigDataToggle.checked = state.bigData === true; 
         }
 
         state.stages.forEach((stage, idx) => {
@@ -748,21 +798,52 @@
         }
     }
 
+    function checkBigDataMode() {
+        const bigDataToggle = document.getElementById('bigDataToggle');
+        if (!bigDataToggle) return;
+
+        // Hitung total karakter dari seluruh stage yang ada
+        const totalChars = state.stages.reduce((acc, stage) => {
+            const src = stage.inputMode === 'table'
+                ? serializeDelimited(stage.table.rows, stage.table.delimiter)
+                : (stage.inputString || '');
+            return acc + src.length;
+        }, 0);
+
+        // Matikan Auto-run jika karakter lebih dari BIG_DATA_COMPUTE_CHAR_MINIMAL dan posisi sakelar sedang aktif
+        if (totalChars > BIG_DATA_COMPUTE_CHAR_MINIMAL && !state.bigData) {
+            state.bigData = true;
+            bigDataToggle.checked = true;
+            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL} characters)`);
+        }
+    }
+
     function refreshAllOutputs(force = false) {
         // Cek batas karakter sebelum memutuskan untuk kalkulasi otomatis
         checkAutoComputeLimit();
+        checkBigDataMode();
 
         // Jika Auto-run mati dan tidak dipicu tombol manual, batalkan pemrosesan
         if (!state.autoCompute && !force) {
             return; 
         }
+
+        if (isPipelineRunning) return;      // cegah klik ganda / auto-run bertumpuk
+        setPipelineRunning(true);
         
         computeAll().then(() => {
                 document.querySelectorAll('.stage-wrap').forEach(wrap => {
                 const stage = state.stages.find(s => s.id === wrap.dataset.stageId);
                 if (stage) updateStageOutput(wrap, stage);
             });
+            
+        })
+        .catch(err => {
+            console.error('Pipeline failure:', err);
+        })
+        .finally(() => {
             cleanComputeData();
+            setPipelineRunning(false);
         });
     }
 
@@ -825,6 +906,7 @@
         });
 
         const usePrev = wrap.querySelector('[data-role="usePrev"]');
+        const field = wrap.querySelector('[data-role="inputField"]');
         if (usePrev) {
             usePrev.addEventListener('change', (e) => {
                 stage.usePreviousOutput = e.target.checked;
@@ -833,6 +915,8 @@
                 //     stage.inputMode = 'text';
                 //     wrap.querySelectorAll('[data-role="inputModeSeg"] button').forEach(b => b.classList.toggle('active', b.dataset.value === 'text'));
                 // }
+                if (field)
+                    field.readonly = e.target.checked;
 
                 renderInputArea(wrap, stage);
                 bindInputAreaEvents(wrap, stage);
@@ -879,9 +963,35 @@
             const field = wrap.querySelector('[data-role="inputField"]');
             if (field) {
                 enableTabIndent(field);
+
+                // Event ketika paste
+                field.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const isUsingPrev = (state.stages[0] != stage && stage.usePreviousOutput);
+                    if (isUsingPrev)
+                        return;
+
+                    const fullInput = (e.clipboardData || window.clipboardData).getData('text');
+                    stage.inputString = fullInput;
+                    checkBigDataMode();
+                    
+                    const displayInput = fullInput.length > textFieldVisibleCharLength && state.bigData
+                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length} characters.]`
+                    : fullInput;
+
+                    field.value = displayInput;
+                    refreshAllOutputs();
+                });
+
+
                 // Event ketika pengguna mengetik biasa
                 field.addEventListener('input', (e) => {
-                    stage.inputString = e.target.value;
+                    const isUsingPrev = (stage.usePreviousOutput && state.stages[0] != stage);
+                    console.log ("isUsingPrev", isUsingPrev);
+                    if (!isUsingPrev)
+                        stage.inputString = e.target.value;
+                    else
+                        field.value = stage.inputString;
                     refreshAllOutputs();
                 });
 
@@ -1133,15 +1243,11 @@
         // ---------------- 3. Delegation Event PASTE ----------------
         tw.addEventListener('paste', (e) => {
             const cell = e.target.closest('.cell');
-            if (!cell) {
-                const text = (e.clipboardData || window.clipboardData).getData('text');
-                if (text)
-                    importText(text, wrap, stage);
-            } else {
-                handleCellPaste(cell, e, wrap, stage);
-            }
+            handleCellPaste(cell, e, wrap, stage);
         });
     }
+
+    
 
     function enableTabIndent(textarea) {
         textarea.addEventListener('keydown', function(e) {
@@ -1268,6 +1374,12 @@
         const text = (e.clipboardData || window.clipboardData).getData('text');
         if (!text) return;
 
+        if (!cell) {
+            importText(text, wrap, stage);
+            checkBigDataMode();
+            return;
+        }
+
         const table = stage.table;
         const r0 = parseInt(cell.dataset.row, 10);
         const c0 = parseInt(cell.dataset.col, 10);
@@ -1341,6 +1453,7 @@
         }
 
         renderTable(wrap, stage);
+        checkBigDataMode();
         refreshAllOutputs();
     }
 
@@ -1453,11 +1566,28 @@
             if (state.autoCompute) refreshAllOutputs(true);
         });
 
+        document.getElementById('bigDataToggle').addEventListener('change', (e) => {
+            state.bigData = e.target.checked;
+            persistToUrl();
+            if (state.bigData) refreshAllOutputs(true);
+        });
+
         document.getElementById('runPipelineBtn').addEventListener('click', () => {
             refreshAllOutputs(true); // Paksa perhitungan berjalan
             showToast('Pipeline executed');
         });
     }
+
+    const runPipelineBtn = document.getElementById('runPipelineBtn');
+    const runPipelineLabel = runPipelineBtn.querySelector('.btn-label');
+    function setPipelineRunning(isRunning) {
+        isPipelineRunning = isRunning;
+        runPipelineBtn.classList.toggle('is-running', isRunning);
+        runPipelineBtn.setAttribute('aria-busy', String(isRunning));
+        runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
+    }
+
+    const yieldToUI = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
     let toastTimer;
     function showToast(msg) {

@@ -29,6 +29,14 @@
         <div class="topbar-actions">
             <!-- Grup 1: kontrol pipeline -->
             <div class="action-group">
+                <label class="switch-row" title="Otomatis aktif dan jalankan pipeline dengan mode big data">
+                    <span class="switch">
+                        <input type="checkbox" id="bigDataToggle">
+                        <span class="track"></span>
+                        <span class="thumb"></span>
+                    </span>
+                    <span class="switch-label">Big-data</span>
+                </label>
                 <label class="switch-row" title="Jalankan pipeline otomatis saat input berubah">
                     <span class="switch">
                         <input type="checkbox" id="autoComputeToggle" checked>
@@ -38,10 +46,11 @@
                     <span class="switch-label">Auto-run</span>
                 </label>
 
-                <button class="btn btn-primary" id="runPipelineBtn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <button class="btn btn-primary" id="runPipelineBtn" aria-live="polite">
+                    <svg class="icon-play" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" />
                     </svg>
+                    <span class="spinner" aria-hidden="true"></span>
                     <span class="btn-label">Run Pipeline</span>
                 </button>
 

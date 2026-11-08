@@ -12,7 +12,7 @@
     const TABLE_MAX_VISIBLE_ROWS_NORMAL = 50;
     const TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL = 200;    // Batas jumlah karakter per sel di DOM
 
-    const TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA = 5000;
+    const TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA = 1000;
     const TABLE_MAX_VISIBLE_ROWS_BIG_DATA = 10;
     const TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA = 50;    // Batas jumlah karakter per sel di DOM
 
@@ -749,7 +749,7 @@
             if (inField) {
                 const fullInput = stage._computedInput || '';
                 const displayInput = fullInput.length > textFieldVisibleCharLength 
-                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length?.toLocaleString('en-US')}<} characters.]`
+                    ? fullInput.substring(0, textFieldVisibleCharLength) + `\n\n... [Input preview truncated. Total: ${fullInput.length?.toLocaleString('en-US')} characters.]`
                     : fullInput;
                 
                 if (inField.value !== displayInput) {

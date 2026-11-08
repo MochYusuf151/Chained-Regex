@@ -613,17 +613,24 @@
         const isTruncatedRows = rows.length > tableMaxVisibleRows;
         const visibleRows = rows.slice(0, tableMaxVisibleRows);
         const colCount = Math.max(...rows.map(r => r.length));
+        const isUsingPrev = (stage.usePreviousOutput && state.stages[0] != stage);
 
         let html = '<table class="pipeline-table"><tbody>';
         html += '<tr><td class="rowhandle"></td>';
         for (let c = 0; c < colCount; c++) {
-            html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
+            if (state.bigData)
+                html += `<td class="colhandle">${c}</td>`;
+            else
+                html += `<td class="colhandle"><button data-role="delCol" data-col="${c}" title="Delete column">${c} [❌️]</button></td>`;
         }
         html += '</tr>';
 
         visibleRows.forEach((row, r) => {
             const isHeaderRow = stage.table.hasHeader && r === 0;
-            html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
+            if (state.bigData)
+                html += `<tr><td class="rowhandle">${r}</td>`;
+            else
+                html += `<tr><td class="rowhandle"><button data-role="delRow" data-row="${r}" title="Delete row">${r}<br>[❌️]</button></td>`;
             
             for (let c = 0; c < colCount; c++) {
                 const tag = isHeaderRow ? 'th' : 'td';
@@ -810,6 +817,34 @@
         }
     }
 
+    function updateBigDataMode(active, toggleAction = false){
+        if (state.bigData === active)
+            return;
+        const bigDataToggle = document.getElementById('bigDataToggle');
+        if (active) {
+            state.bigData = true;
+            textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA;
+            tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
+            tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
+            if (toggleAction)
+                showToast(`Big-data mode enabled. Avoid tables if possible`);
+            renderAll();
+        } else {
+            if (!checkBigDataMode()) {
+                state.bigData = false;
+                textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
+                tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
+                tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL;
+                renderAll();
+            } else {
+                state.bigData = true;
+                showToast(`Big-data mode cannot be disabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters)`);    
+            }
+        }
+        bigDataToggle.checked = state.bigData;
+        persistToUrl();
+    }
+
     function checkBigDataMode() {
         const bigDataToggle = document.getElementById('bigDataToggle');
         if (!bigDataToggle) return;
@@ -824,13 +859,11 @@
 
         // Matikan Auto-run jika karakter lebih dari BIG_DATA_COMPUTE_CHAR_MINIMAL dan posisi sakelar sedang aktif
         if (totalChars > BIG_DATA_COMPUTE_CHAR_MINIMAL && !state.bigData) {
-            state.bigData = true;
-            bigDataToggle.checked = true;
-            textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA;
-            tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
-            tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
-            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters)`);
+            updateBigDataMode(true);
+            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters). Avoid tables if possible`);
+            return true;
         }
+        return false;
     }
 
     function refreshAllOutputs(force = false) {
@@ -1660,18 +1693,7 @@
         });
 
         document.getElementById('bigDataToggle').addEventListener('change', (e) => {
-            state.bigData = e.target.checked;
-            persistToUrl();
-            if (state.bigData) {
-                textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA;
-                tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
-                tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
-            } else {
-                textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
-                tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
-                tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL;
-                checkBigDataMode();
-            }
+            updateBigDataMode(e.target.checked, true);
         });
 
         document.getElementById('runPipelineBtn').addEventListener('click', () => {

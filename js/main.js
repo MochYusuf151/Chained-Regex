@@ -830,7 +830,8 @@
                 showToast(`Big-data mode enabled. Avoid tables if possible`);
             renderAll();
         } else {
-            if (!checkBigDataMode()) {
+            state.bigData = false;
+            if (!checkBigDataMode(true)) {
                 state.bigData = false;
                 textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
                 tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
@@ -845,7 +846,7 @@
         persistToUrl();
     }
 
-    function checkBigDataMode() {
+    function checkBigDataMode(checkMode = false) {
         const bigDataToggle = document.getElementById('bigDataToggle');
         if (!bigDataToggle) return;
 
@@ -859,8 +860,10 @@
 
         // Matikan Auto-run jika karakter lebih dari BIG_DATA_COMPUTE_CHAR_MINIMAL dan posisi sakelar sedang aktif
         if (totalChars > BIG_DATA_COMPUTE_CHAR_MINIMAL && !state.bigData) {
-            updateBigDataMode(true);
-            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters). Avoid tables if possible`);
+            if (!checkMode) {
+                updateBigDataMode(true);
+                showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters). Avoid tables if possible`);
+            }
             return true;
         }
         return false;

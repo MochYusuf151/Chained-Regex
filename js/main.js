@@ -26,7 +26,10 @@
     let fnUtils = {
         transpose: (rows) => rows[0].map((_, colIndex) => rows.map(row => row[colIndex])),
         stringifyTable: (rows, delimiter) => rows.map(r => r.join(delimiter)).join('\n'),
-        help: `Available utility functions: transpose(table.rows), stringifyTable(table.rows, delimiter)`
+        showToast: (message) => showToast("[Script] " + message),
+        parseDelimited: (text, delimiter) => parseDelimited(text, delimiter),
+        serializeDelimited: (rows, delimiter) => serializeDelimited(rows, delimiter),
+        help: `Available utility functions: transpose(table.rows), stringifyTable(table.rows, delimiter), showToast(message), parseDelimited(text, delimiter), serializeDelimited(rows, delimiter)`
     };
     function uid() { uidCounter += 1; return 's' + Date.now().toString(36) + uidCounter.toString(36); }
     function debounce(fn, wait) {
@@ -827,7 +830,7 @@
             tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
             tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
             if (toggleAction)
-                showToast(`Big-data mode enabled. Avoid tables if possible`);
+                showToast(`Big-data mode enabled. Avoid table view if possible`);
             renderAll();
         } else {
             state.bigData = false;
@@ -879,7 +882,7 @@
         if (totalChars > BIG_DATA_COMPUTE_CHAR_MINIMAL && !state.bigData) {
             if (!checkMode) {
                 updateBigDataMode(true);
-                showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters). Avoid tables if possible`);
+                showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters). Avoid table view if possible`);
             }
             return true;
         }
@@ -1809,11 +1812,23 @@
     // toastTimer tetap dipakai dari variabel yang sudah ada
 
     const TOAST_DURATION = 3000; // lama toast tampil (ms)
+    const TOAST_DURATION_SHORT = 1000;
     const TOAST_GAP = 250;       // jeda untuk animasi fade-out, samakan dengan transition CSS #toast
 
+    let toastStartAt;
+
     function showToast(msg) {
-        if ((toastActive && toast.textContent != msg) || !  toastActive)
+        if ((toastActive && toast.textContent != msg) || !toastActive) {
             toastQueue.push(String(msg));
+            if (toastActive) {
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                            toast.classList.remove('show');
+                            // Tunggu fade-out selesai, baru tampilkan toast berikutnya
+                            toastTimer = setTimeout(processToastQueue, TOAST_GAP);
+                        }, Math.max(0, TOAST_DURATION_SHORT - (performance.now() - toastStartAt)));
+            }
+        }
         if (!toastActive) processToastQueue();
     }
 
@@ -1835,8 +1850,9 @@
         // Kalau antrean menumpuk, durasi dipercepat supaya tidak tertinggal lama,
         // tapi semua pesan tetap ditampilkan.
         const pending = toastQueue.length;
-        const duration = pending >= 5 ? 900 : pending >= 3 ? 1300 : TOAST_DURATION;
+        const duration = pending >= 1 ? TOAST_DURATION_SHORT : TOAST_DURATION;
 
+        toastStartAt = performance.now();
         toastTimer = setTimeout(() => {
             toast.classList.remove('show');
             // Tunggu fade-out selesai, baru tampilkan toast berikutnya
@@ -1854,6 +1870,10 @@
 
     function reloadUrl() {
         state = loadFromUrl();
+        titleField.value = state.title;
+        descField.value = state.description;
+        docTitleLabel.textContent = state.title || 'Text Transformation Pipeline';
+        document.title = state.title ? state.title + ' · Text Transformation Pipeline' : 'Text Transformation Pipeline';
         renderAll();
     }
 

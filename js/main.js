@@ -770,13 +770,15 @@
         const autoComputeToggle = document.getElementById('autoComputeToggle');
         if (autoComputeToggle) {
             // Jika tidak didefinisikan (misal URL lama), anggap default-nya true
-            autoComputeToggle.checked = state.autoCompute !== false; 
+            autoComputeToggle.checked = state.autoCompute !== false;
+            state.autoCompute = autoComputeToggle.checked;
         }
 
         const bigDataToggle = document.getElementById('bigDataToggle')
         if (bigDataToggle) {
             // Jika tidak didefinisikan (misal URL lama), anggap default-nya false
             bigDataToggle.checked = state.bigData === true; 
+            state.bigData = bigDataToggle.checked;
         }
 
         state.stages.forEach((stage, idx) => {

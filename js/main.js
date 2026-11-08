@@ -5,7 +5,7 @@
     let uidCounter = 0;
     let isPipelineRunning = false;
     let rerunQueued = false;
-    const MIN_RUNNING_MS = 150;
+    const MIN_RUNNING_MS = 200;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
 
     const TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL = 50000;
@@ -1678,15 +1678,57 @@
             refreshAllOutputs(true); // Paksa perhitungan berjalan
             showToast('Pipeline executed');
         });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'F8') {
+                event.preventDefault();
+                refreshAllOutputs(true);
+                showToast('Pipeline executed');
+            }
+        });
     }
 
     const runPipelineBtn = document.getElementById('runPipelineBtn');
     const runPipelineLabel = runPipelineBtn.querySelector('.btn-label');
+
+    let startedRunningAt = 0;
+    let stopTimer = null;
+    let startToStopTimer = null;
+
+    const MIN_RUNNING_BG_MS = 4500;
+    const ANIMATION_TRANSITION = 1800;
+
+    let shimmerAnimation;
+
     function setPipelineRunning(isRunning) {
         isPipelineRunning = isRunning;
+
         runPipelineBtn.classList.toggle('is-running', isRunning);
         runPipelineBtn.setAttribute('aria-busy', String(isRunning));
-        runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
+        runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline (F8)';
+
+        if (isRunning) {
+            startedRunningAt = performance.now();
+            clearTimeout(stopTimer);            // batalkan stop yang tertunda
+            clearTimeout(startToStopTimer);            // batalkan stop yang tertunda
+            document.body.classList.toggle('running', true)
+            document.body.classList.toggle('stopping', false);
+        } else {
+            const remaining = Math.max(0, MIN_RUNNING_BG_MS - (performance.now() - startedRunningAt));
+            const remainingStopping = Math.max(0, MIN_RUNNING_BG_MS - ANIMATION_TRANSITION - (performance.now() - startedRunningAt));
+            clearTimeout(stopTimer);
+            clearTimeout(startToStopTimer);
+            if (!shimmerAnimation)
+                shimmerAnimation = document.getAnimations().find(a => a.animationName === 'dot-shimmer') || null;
+            startToStopTimer = setTimeout(() => {
+                document.body.classList.toggle('stopping', true);
+            }, remainingStopping);
+            stopTimer = setTimeout(() => {
+                document.body.classList.toggle('stopping', false);
+                document.body.classList.toggle('running', false);
+                shimmerAnimation.currentTime = 0;
+            }, remaining);
+        }
     }
 
     const yieldToUI = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
@@ -1700,7 +1742,8 @@
     const TOAST_GAP = 250;       // jeda untuk animasi fade-out, samakan dengan transition CSS #toast
 
     function showToast(msg) {
-        toastQueue.push(String(msg));
+        if ((toastActive && toast.textContent != msg) || !  toastActive)
+            toastQueue.push(String(msg));
         if (!toastActive) processToastQueue();
     }
 

@@ -49,21 +49,52 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-body::before {
-  content: "";
+/* Layer glow */
+.bg-glow {
   position: fixed;
   inset: 0;
   z-index: -2;
+  overflow: hidden;
   pointer-events: none;
-  background:
-    radial-gradient(900px 500px at 12% -5%, rgba(var(--glow-mint), 0.10), transparent 60%),
-    radial-gradient(800px 500px at 92% 8%, rgba(var(--glow-violet), 0.10), transparent 60%),
-    radial-gradient(1000px 600px at 50% 110%, rgba(var(--glow-mint), 0.05), transparent 65%),
-    var(--bg-base);
 }
 
+.blob {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
 
-/* Lapisan pola titik, memudar ke bawah */
+.blob-mint {
+  top: -30vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, rgba(var(--glow-mint), 0.32), transparent 65%);
+  opacity: 0.4;
+  /* animation: glow-mint 3s ease-in-out infinite alternate; */
+}
+
+.blob-violet {
+  top: -25vmax;
+  right: -25vmax;
+  background: radial-gradient(circle, rgba(var(--glow-violet), 0.32), transparent 65%);
+  opacity: 0.4;
+  /* animation: glow-violet 4s ease-in-out infinite alternate; */
+}
+
+/* Hanya opacity + scale kecil, tanpa translate */
+@keyframes glow-mint {
+  from { opacity: 0.3; transform: scale(0.96); }
+  to   { opacity: 0.4;   transform: scale(1.06); }
+}
+
+/* Fase berlawanan: saat mint redup, violet terang */
+@keyframes glow-violet {
+  from { opacity: 0.4;   transform: scale(1.06); }
+  to   { opacity: 0.3; transform: scale(0.96); }
+}
+
+/* Pola titik dasar (tetap seperti awal) */
 body::after {
   content: "";
   position: fixed;
@@ -75,32 +106,72 @@ body::after {
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
           mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
 }
-
-/* Lapisan glow */
+/* Kilau putih: selalu ada tapi tersembunyi, menyala halus saat "running" */
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 500px at 12% -5%, rgba(var(--glow-mint), 0.10), transparent 60%),
-    radial-gradient(800px 500px at 92% 8%, rgba(var(--glow-violet), 0.10), transparent 60%),
-    radial-gradient(1000px 600px at 50% 110%, rgba(var(--glow-mint), 0.05), transparent 65%),
-    var(--bg-base);
-}
-
-/* Lapisan pola titik, memudar ke bawah */
-body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  opacity: 0;
+  transition: opacity 1.8s cubic-bezier(0.2, 0.6, 0.3, 1); 
+
+  /* alpha diturunkan dari 0.9 ke 0.5 */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
   background-size: 22px 22px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
-          mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+
+   -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
+    linear-gradient(to bottom, #000 0%, transparent 70%);
+          mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
+    linear-gradient(to bottom, #000 0%, transparent 70%);
+
+  /* layer 1 diulang tiap 50vh (jarak antar pita), layer 2 tetap fade ke bawah */
+  -webkit-mask-size: 100% 50vh, 100% 100%;
+          mask-size: 100% 50vh, 100% 100%;
+  -webkit-mask-repeat: repeat-y, no-repeat;
+          mask-repeat: repeat-y, no-repeat;
+
+  -webkit-mask-composite: source-in;
+          mask-composite: intersect;
+  -webkit-mask-position: 0 0, 0 0;
+          mask-position: 0 0, 0 0;
+
+  animation: dot-shimmer 4s linear infinite;
+  animation-play-state: paused;
+}
+
+body.running::before {
+  opacity: 0.7;
+  animation-play-state: running;
+}
+
+body.stopping::before {
+  opacity: 0;
+}
+
+@keyframes dot-shimmer {
+  from {
+    -webkit-mask-position: 0 0, 0 0;
+            mask-position: 0 0, 0 0;
+  }
+  to {
+    /* 100vh = 2x jarak ulang (50vh), jadi loop-nya mulus tanpa lompatan */
+    -webkit-mask-position: 0 100vh, 0 0;
+            mask-position: 0 100vh, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+
+  body::before {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 ::selection {

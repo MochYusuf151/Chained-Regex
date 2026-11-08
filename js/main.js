@@ -14,9 +14,9 @@
     const TABLE_MAX_VISIBLE_ROWS_BIG_DATA = 10;
     const TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA = 50;    // Batas jumlah karakter per sel di DOM
 
-    let textFieldVisibleCharLength = 50000;
-    let tableMaxVisibleRows = 50;
-    let tableMaxCellVisibleChars = 200;    // Batas jumlah karakter per sel di DOM
+    let textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
+    let tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
+    let tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL;
 
     const BIG_DATA_COMPUTE_CHAR_MINIMAL = 500000;
     const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
@@ -794,7 +794,7 @@
         if (totalChars > AUTO_COMPUTE_CHAR_LIMIT && state.autoCompute) {
             state.autoCompute = false;
             autoToggle.checked = false;
-            showToast(`Auto-run disabled (Input > ${AUTO_COMPUTE_CHAR_LIMIT} characters)`);
+            showToast(`Auto-run disabled (Input > ${AUTO_COMPUTE_CHAR_LIMIT.toLocaleString('en-US')} characters)`);
         }
     }
 
@@ -814,7 +814,10 @@
         if (totalChars > BIG_DATA_COMPUTE_CHAR_MINIMAL && !state.bigData) {
             state.bigData = true;
             bigDataToggle.checked = true;
-            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL} characters)`);
+            textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA;
+            tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
+            tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
+            showToast(`Big-data mode enabled (Input > ${BIG_DATA_COMPUTE_CHAR_MINIMAL.toLocaleString('en-US')} characters)`);
         }
     }
 
@@ -1199,6 +1202,8 @@
 
         // ---------------- 1. Delegation Event CLICK ----------------
         tw.addEventListener('click', (e) => {
+            if (state.bigData) // disable if bigData enabled
+                return;
             // A. Hapus Baris
             const delRowBtn = e.target.closest('[data-role="delRow"]');
             if (delRowBtn) {
@@ -1228,6 +1233,9 @@
 
         // ---------------- 2. Delegation Event INPUT ----------------
         tw.addEventListener('input', (e) => {
+            if (state.bigData) // disable if bigData enabled
+                return;
+
             const cell = e.target.closest('.cell');
             if (!cell) return;
 
@@ -1563,13 +1571,21 @@
         document.getElementById('autoComputeToggle').addEventListener('change', (e) => {
             state.autoCompute = e.target.checked;
             persistToUrl();
-            if (state.autoCompute) refreshAllOutputs(true);
         });
 
         document.getElementById('bigDataToggle').addEventListener('change', (e) => {
             state.bigData = e.target.checked;
             persistToUrl();
-            if (state.bigData) refreshAllOutputs(true);
+            if (state.bigData) {
+                textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_BIG_DATA;
+                tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_BIG_DATA;
+                tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_BIG_DATA;
+            } else {
+                textFieldVisibleCharLength = TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL;
+                tableMaxVisibleRows = TABLE_MAX_VISIBLE_ROWS_NORMAL;
+                tableMaxCellVisibleChars = TABLE_MAX_CELL_VISIBLE_CHARS_NORMAL;
+                checkBigDataMode();
+            }
         });
 
         document.getElementById('runPipelineBtn').addEventListener('click', () => {

@@ -1724,8 +1724,23 @@
         window.addEventListener('keydown', (event) => {
             if (event.key === 'F8') {
                 event.preventDefault();
+                const runPipelineBtn = document.getElementById('runPipelineBtn');
                 refreshAllOutputs(true);
+                runPipelineBtn.classList.toggle("pressed", true);
                 showToast('Pipeline executed');
+                setTimeout(() => runPipelineBtn.classList.toggle("pressed", false), 320);
+            }
+        });
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'F9') {
+                event.preventDefault();
+                const copyResultBtn = document.getElementById('copyResultBtn');
+                copyResultBtn.classList.toggle("pressed", true);
+                setTimeout(() => {
+                    copyResultBtn.classList.toggle("pressed", false);
+                    navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
+                }, 320);
             }
         });
     }

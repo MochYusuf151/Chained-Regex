@@ -340,8 +340,9 @@ select {
     background: var(--panel-raised);
 }
 
-.btn:active {
+.btn:active, .btn.pressed {
     transform: translateY(1px);
+    border-color: var(--text-faint);
 }
 
 .btn-primary {

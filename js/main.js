@@ -4,6 +4,8 @@
     /* ============================= Utilities ============================= */
     let uidCounter = 0;
     let isPipelineRunning = false;
+    let rerunQueued = false;
+    const MIN_RUNNING_MS = 150;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
 
     const TEXT_FIELD_VISIBLE_CHAR_LENGTH_NORMAL = 50000;
@@ -682,7 +684,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function Vars: <b>inputString, globalVar, matches, matchIndex, groupIndex.<br>Table vars: rowIndex, columns[], table</b>.<br>Function Utils: fnUtils (type 'return fnUtils.help' for help).<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern to process by match. Leave Search Pattern blank to process the whole input.</div>
+        <div class="script-hint" style="margin-top:8px;">Function Vars: <b>inputString, globalVar, matches, matchIndex, groupIndex.<br>Table vars: rowIndex, columns[], table</b>.<br>Function Utils: fnUtils (type 'return fnUtils.help' for help).<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern to process by match. Leave Search Pattern blank to process the whole input. Use await to improve responsiveness of script</div>
       </div>
       `}
     </div>
@@ -831,7 +833,11 @@
             return; 
         }
 
-        if (isPipelineRunning) return;      // cegah klik ganda / auto-run bertumpuk
+        if (isPipelineRunning) {
+            rerunQueued = true;
+            return;      // cegah klik ganda / auto-run bertumpuk
+        }
+        const startedAt = performance.now();
         setPipelineRunning(true);
         
         computeAll().then(() => {
@@ -846,7 +852,15 @@
         })
         .finally(() => {
             cleanComputeData();
-            setPipelineRunning(false);
+            // setPipelineRunning(false);
+            const remaining = Math.max(0, MIN_RUNNING_MS - (performance.now() - startedAt));
+            setTimeout(() => {
+                setPipelineRunning(false);
+                if (rerunQueued) {
+                    rerunQueued = false;
+                    refreshAllOutputs(true);
+                }
+            }, remaining);
         });
     }
 
@@ -990,7 +1004,6 @@
                 // Event ketika pengguna mengetik biasa
                 field.addEventListener('input', (e) => {
                     const isUsingPrev = (stage.usePreviousOutput && state.stages[0] != stage);
-                    console.log ("isUsingPrev", isUsingPrev);
                     if (!isUsingPrev)
                         stage.inputString = e.target.value;
                     else

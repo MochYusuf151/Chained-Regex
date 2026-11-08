@@ -225,56 +225,94 @@ select {
     border-color: var(--accent-strong);
 }
 
-/* ---------- Running state ---------- */
+/* ---------- Run button: running state ---------- */
+#runPipelineBtn {
+    position: relative;
+    overflow: hidden;
+    min-width: 128px; /* cegah lebar tombol loncat saat label berubah */
+    transition: background .2s ease, border-color .2s ease,
+                transform .05s ease, filter .3s ease;
+}
+
+.icon-slot {
+    position: relative;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.icon-slot > * {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    transition: opacity .25s ease, scale .25s cubic-bezier(.4, 0, .2, 1),
+                rotate .25s cubic-bezier(.4, 0, .2, 1);
+}
+
 .spinner {
-    display: none;
     width: 14px;
     height: 14px;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
-    flex-shrink: 0;
-    animation: btn-spin .7s linear infinite;
+    opacity: 0;
+    scale: .6;
+    animation: btn-spin .8s linear infinite;
+    animation-play-state: paused;
 }
 
-.btn.is-running {
-    pointer-events: none;
-    cursor: progress;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn.is-running .icon-play { display: none; }
-.btn.is-running .spinner   { display: inline-block; }
-
-/* Shimmer yang bergerak melintasi tombol */
-.btn-primary.is-running::after {
+/* Shimmer: opacity di-transition, jadi masuk dan keluar halus */
+#runPipelineBtn::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        100deg,
-        transparent 30%,
-        rgba(255, 255, 255, .35) 50%,
-        transparent 70%
-    );
+    background: linear-gradient(100deg,
+        transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
     transform: translateX(-100%);
-    animation: btn-shimmer 1.2s ease-in-out infinite;
+    opacity: 0;
+    transition: opacity .3s ease;
+    animation: btn-shimmer 1.4s ease-in-out infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+#runPipelineBtn.is-running {
+    pointer-events: none;
+    cursor: progress;
+    filter: brightness(.95);
+}
+
+
+#runPipelineBtn.is-running .icon-play {
+    opacity: 0;
+    scale: .6;
+    rotate: -45deg;
+}
+
+#runPipelineBtn.is-running .spinner {
+    opacity: 1;
+    scale: 1;
+    animation-play-state: running;
+}
+
+#runPipelineBtn.is-running::after {
+    opacity: 1;
+    animation-play-state: running;
 }
 
 @keyframes btn-spin {
-    to { transform: rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
+@keyframes btn-shimmer { to { transform: translateX(100%); } }
 
-@keyframes btn-shimmer {
-    to { transform: translateX(100%); }
-}
-
-/* Hormati preferensi pengguna yang mengurangi animasi */
 @media (prefers-reduced-motion: reduce) {
+    #runPipelineBtn::after { display: none; }
     .spinner { animation-duration: 1.6s; }
-    .btn-primary.is-running::after { animation: none; }
 }
+
+/* ------------- Button --------------- */
 
 .btn-ghost {
     background: transparent;

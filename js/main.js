@@ -214,7 +214,7 @@
 
         return defaultState();
     }
-    
+
     const persistToUrl = debounce(function () {
         const stateStr = encodeState();
         if (!stateStr) return; // Abaikan jika kosong atau dibatasi (Limit 20k)
@@ -1554,7 +1554,7 @@
         // 1. Bind Shared Events (Selalu ada baik mode Regex atau Script)
         const searchField = wrap.querySelector('[data-role="searchField"]');
         if (searchField) {
-            searchField.addEventListener('input', (e) => { stage.regex.search = e.target.value; markValidity(searchField, stage); refreshAllOutputs(); });
+            searchField.addEventListener('input', (e) => { stage.regex.search = e.target.value; markValidity(searchField, stage); persistToUrl(); refreshAllOutputs(); });
         }
 
         wrap.querySelectorAll('.flag-btn').forEach(btn => {
@@ -1571,8 +1571,8 @@
         if (stage.processingMode === 'regex') {
             const subField = wrap.querySelector('[data-role="substituteField"]');
             const iterField = wrap.querySelector('[data-role="iterateField"]');
-            if (subField) subField.addEventListener('input', (e) => { stage.regex.substitute = e.target.value; refreshAllOutputs(); });
-            if (iterField) iterField.addEventListener('input', (e) => { stage.regex.iteration = Math.max(1, parseInt(e.target.value, 10) || 1); refreshAllOutputs(); });
+            if (subField) subField.addEventListener('input', (e) => { stage.regex.substitute = e.target.value; persistToUrl(); refreshAllOutputs(); });
+            if (iterField) iterField.addEventListener('input', (e) => { stage.regex.iteration = Math.max(1, parseInt(e.target.value, 10) || 1); persistToUrl(); refreshAllOutputs(); });
 
             const modeSeg = wrap.querySelector('[data-role="replaceModeSeg"]');
             if (modeSeg) {
@@ -1580,6 +1580,7 @@
                     const btn = e.target.closest('button'); if (!btn) return;
                     stage.regex.replaceMode = btn.dataset.value;
                     wrap.querySelectorAll('[data-role="replaceModeSeg"] button').forEach(b => b.classList.toggle('active', b === btn));
+                    persistToUrl();
                     refreshAllOutputs();
                 });
             }
@@ -1587,7 +1588,7 @@
             const scriptField = wrap.querySelector('[data-role="scriptField"]');
             if (scriptField) {
                 enableTabIndent(scriptField);
-                scriptField.addEventListener('input', (e) => { stage.script = e.target.value; refreshAllOutputs(); });
+                scriptField.addEventListener('input', (e) => { stage.script = e.target.value; persistToUrl(); refreshAllOutputs(); });
             }
         }
     }

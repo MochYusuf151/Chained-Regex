@@ -280,7 +280,7 @@
                     for (const group of match) {
                         if (groupIndex > 0 && group !== undefined) {
                             let inputString = group;
-                            let result = await fn(inputString, matches, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, null, fnUtils);
+                            let result = await fn(inputString, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, null, fnUtils);
                             // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                             matchString = matchString.replace(inputString, result);
                         }

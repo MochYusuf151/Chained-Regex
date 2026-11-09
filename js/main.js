@@ -1193,7 +1193,8 @@
         const usePrev = wrap.querySelector('[data-role="usePrev"]');
         const inputTableButtons = [ pasteBtn, addRowBtn, addColBtn, clearBtn, clearDataBtn ];
         inputTableButtons.forEach(btn => {
-                btn.disabled = usePrev.checked;
+                if (usePrev)
+                    btn.disabled = usePrev.checked;
             }
         )
 

@@ -322,7 +322,7 @@
             let matchIndex = 0;
 
             if (!stage.regex.search) {
-                let result = await fn(input, null, null, null, globalVar, null, fnUtils);
+                let result = await fn(input, null, null, globalVar, null, fnUtils);
                 return result === undefined ? input : result;
             }
             for (const match of matches) {

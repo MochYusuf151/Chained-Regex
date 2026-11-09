@@ -255,7 +255,7 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new AsyncFunction('inputString', 'matches', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', 'fnUtils', stage.script);
+            const fn = new AsyncFunction('inputString', 'matchIndex', 'groupIndex', 'rowIndex', 'columns', 'table', 'globalVar', 'fnMatches', 'fnUtils', stage.script);
             let { rows, delimiter } = parseDelimited(input, stage.table.delimiter);
             
             let outputValue = null;
@@ -263,7 +263,7 @@
             let rowIndex = 0;
 
             if (!stage.regex.search) {
-                let result = await fn(input, null, null, null, null, null, stage.table, globalVar, fnUtils);
+                let result = await fn(input, null, null, null, null, stage.table, globalVar, null, fnUtils);
                 return result === undefined ? input : result;
             }
 
@@ -280,7 +280,7 @@
                     for (const group of match) {
                         if (groupIndex > 0 && group !== undefined) {
                             let inputString = group;
-                            let result = await fn(inputString, matches, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, fnUtils);
+                            let result = await fn(inputString, matches, matchIndex, groupIndex, rowIndex, columns, stage.table, globalVar, null, fnUtils);
                             // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                             matchString = matchString.replace(inputString, result);
                         }
@@ -315,17 +315,16 @@
         const globalRegex = new RegExp(stage.regex.search, flags);
 
         try {
-            const fn = new AsyncFunction('inputString', 'matches', 'matchIndex', 'groupIndex', 'globalVar', 'fnUtils', stage.script);
+            const fn = new AsyncFunction('inputString', 'matchIndex', 'groupIndex', 'globalVar', 'fnMatches', 'fnUtils', stage.script);
             const matches = input.matchAll(globalRegex);
             let outputValue = input;
             let startStringIndex = 0;
             let matchIndex = 0;
 
             if (!stage.regex.search) {
-                let result = await fn(input, null, null, null, globalVar, fnUtils);
+                let result = await fn(input, null, null, null, globalVar, null, fnUtils);
                 return result === undefined ? input : result;
             }
-
             for (const match of matches) {
                 let matchString = match[0];
                 let originalString = match[0];
@@ -334,7 +333,12 @@
                 for (const group of match) {
                     if (groupIndex > 0 && group !== undefined) {
                         let inputString = group;
-                        let result = await fn(inputString, matches, matchIndex, groupIndex, globalVar, fnUtils);
+                        let fnMatches = {
+                            getGroups: () => { return match },
+                            getGroupByKey: (key) => { return match.groups[key] },
+                            help: `matches.getGroups(), getGroupByKey(key)`
+                        }
+                        let result = await fn(inputString, matchIndex, groupIndex, globalVar, fnMatches, fnUtils);
                         // Modifikasi hanya text yang di tangkap groupRegex layaknya v1
                         matchString = matchString.replace(inputString, result);
                     }
@@ -694,7 +698,7 @@
       <div style="display:flex; flex-direction:column; min-height: 80px;">
         <label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:5px;">JS Script Processor</label>
         <textarea class="textarea mono" data-role="scriptField" rows="3" placeholder="return inputString.toUpperCase();" style="flex:1;">${escapeHtml(stage.script)}</textarea>
-        <div class="script-hint" style="margin-top:8px;">Function Vars: <b>inputString, globalVar, matches, matchIndex, groupIndex.<br>Table vars: rowIndex, columns[], table</b>.<br>Function Utils: fnUtils (type 'return fnUtils.help' for help).<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern to process by match. Leave Search Pattern blank to process the whole input. Use await to improve responsiveness of script</div>
+        <div class="script-hint" style="margin-top:8px;">Function Vars: <b>inputString, globalVar, matchIndex, groupIndex.<br>Table vars: rowIndex, columns[], table</b>.<br>Function Utils: fnMatches & fnUtils (type 'return fnUtils.help' or 'return fnMatches.help' for help).<br>Note: Requires capturing groups <code>(...)</code> in Search Pattern to process by match. Leave Search Pattern blank to process the whole input. Use await to improve responsiveness of script</div>
       </div>
       `}
     </div>

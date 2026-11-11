@@ -122,6 +122,7 @@
 
     function defaultState() {
         return {
+            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
             title: '',
             description: '',
             autoCompute: true,
@@ -135,6 +136,8 @@
     /* ---- URL encode/decode ---- */
     function encodeState(stateToEncode = state) {
         try {
+            // if (!stateToEncode.id)
+            //     stateToEncode.id = fragmentSidebar.getActiveItem()?.id;
             const cleanedState = {
                 ...stateToEncode,
                 stages: stateToEncode.stages.map(stage => {
@@ -176,6 +179,7 @@
                 })
             };
 
+
             const json = JSON.stringify(cleanedState);
             return window.LZString ? LZString.compressToEncodedURIComponent(json) : encodeURIComponent(json);
         } catch (e) {
@@ -190,6 +194,8 @@
             const parsed = JSON.parse(json);
             if (!parsed || !Array.isArray(parsed.stages)) return null;
             parsed.stages = parsed.stages.map(s => defaultStage(s));
+            // if (!parsed.id)
+            //     parsed.id = fragmentSidebar.getActiveItem()?.id;
             return parsed;
         } catch (e) { return null; }
     }
@@ -1896,12 +1902,19 @@
             loadData: reloadUrl,
             getMainState: () => state,
             decodeUrl: decodeState,
-            encodeMainState: encodeState
+            encodeMainState: encodeState,
         });
+
         window.addEventListener('hashchange', reloadUrl);
         bindHeaderEvents();
         renderAll();
         startIntroAnimation();
+
+        // if (!state.id) {
+        //     state.id = fragmentSidebar.getActiveItem()?.id;
+        //     if (state.id)
+        //         persistToUrl();
+        // }
     }
 
     function reloadUrl() {
@@ -1914,6 +1927,12 @@
         renderAll();
         startIntroAnimation();
         showToast(`"${state.title}" loaded`)
+
+        // if (!state.id) {
+        //     state.id = fragmentSidebar.getActiveItem()?.id;
+        //     if (state.id)
+        //         persistToUrl();
+        // }
     }
 
     init();

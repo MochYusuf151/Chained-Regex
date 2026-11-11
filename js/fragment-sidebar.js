@@ -85,6 +85,13 @@
     const collapsed = new Set();
     let selectedFolder = null; // folder tujuan untuk item baru
 
+    if (o.getMainState()) {
+      if (o.getMainState()?.id)
+        sidebarState.activeItemId = o.getMainState()?.id;
+      else
+        o.getMainState().id = sidebarState.activeItemId;
+    }
+
     function load() {
       try {
         const s = JSON.parse(localStorage.getItem(o.storageKey));
@@ -220,11 +227,12 @@
       const frag = o.getFragment();
       if (frag !== item.frag) {
         if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm) {
+          // item.name = mainState.title;
           o.applyFragment(item.fragment);
-          
         }
       }
       save();
+      // render();
       // o.loadData();
       // if (o.reloadOnApply) location.reload();
       // else render();
@@ -263,7 +271,7 @@
       // zona drop untuk kembali ke root
       tree.ondragover = (e) => { if (e.target === tree) e.preventDefault(); };
       tree.ondrop = (e) => { if (e.target === tree) dropOn(e, null); };
-      updateActiveItem();
+      // updateActiveItem();
 
     }
 
@@ -498,6 +506,7 @@
             showToast('No Changes');
             save();
           }else {
+            it.name = o.getMainState()?.title;
             it.fragment = o.getFragment();
             it.updatedAt = Date.now();
             save();
@@ -509,6 +518,10 @@
     render();
 
     function updateActiveItem() {
+      if (o.getMainState() && !o.getMainState().id)
+          o.getMainState().id = sidebarState.activeItemId;
+
+      
       const currentlyActiveRow = root.querySelector(`.fsb-row.active`);
       const frag = o.getFragment();
       
@@ -521,10 +534,12 @@
 
       if (!item) return;
       const activeRow = root.querySelector(`.fsb-row[data-id="${item.id}"]`);
+      const rowName = activeRow.querySelector(`.fsb-name`);
 
       if (activeRow) {
         activeRow.classList.toggle("active", true);
         activeRow.classList.toggle("not-saved", frag !== item.fragment);
+        rowName.textContent = o.getMainState()?.title;
       }
 
     }
@@ -550,6 +565,7 @@
       addItem, exportAll,
       updateActiveItem: updateActiveItem,
       findSavedByFragment: findSavedByFragment,
+      getActiveItem: () => sidebarState.items.find((x) => x.id === sidebarState.activeItemId),
     };
   }
 

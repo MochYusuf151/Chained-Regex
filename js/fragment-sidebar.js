@@ -16,7 +16,7 @@
   const DEFAULTS = {
     storageKey: 'text-pipeline-collection.v1',      // kunci localStorage
     openKey: 'text-pipeline-collection.open',       // kunci status buka/tutup sidebar
-    title: 'Saved Pipelies',
+    title: 'Saved Pipelines',
     mount: document.body,            // elemen tempat sidebar dipasang
     reloadOnApply: false,            // true jika app kamu hanya membaca hash saat load
     toggleMount: null,   // selector/elemen, mis. '.topbar-inner'. null = tombol melayang di kiri atas

@@ -44,8 +44,16 @@
   // Ambil fragment dari teks: bisa "#d=..", "d=..", atau URL lengkap (hostname dibuang)
   function toFragment(text) {
     text = String(text || '').trim();
-    const i = text.indexOf('#d=');
-    return (i >= 0 ? text.slice(i + 3) : text).trim();
+    const iHash = text.indexOf('#d=');
+    const iQuery = text.indexOf('?d=');
+    console.log (iHash);
+    console.log (iQuery);
+    if (iHash >= 0)
+      return text.slice(iHash + 3).trim();
+    else if (iQuery >= 0)
+      return text.slice(iQuery + 3).trim();
+    else
+      return text.trim();
   }
 
   const ICONS = {
@@ -326,7 +334,7 @@
 
     function saveCurrent() {
       const frag = o.getFragment();
-      if (!frag) return showToast('Fragment kosong, tidak ada yang disimpan');
+      if (!frag) return showToast('Empty fragment, no saved data');
       const dup = sidebarState.items.find((i) => i.fragment === frag);
       if (dup && !confirm(`Data ini sudah tersimpan sebagai "${dup.name}". Simpan salinan?`)) return;
       const n = prompt('Nama data:', o.getMainState()?.title);
@@ -336,11 +344,12 @@
     }
 
     function pasteUrl() {
-      const t = prompt('Tempel URL lengkap atau fragment (hostname otomatis dibuang):');
+      const t = prompt('Paste complete URL or fragment (hostname will be ignored):');
       const frag = toFragment(t);
-      if (!frag) return;
-      const rawFragData = frag.replaceAll(/^d=/g, "");
-      const parsedMainState = o.decodeUrl(rawFragData);
+      if (!frag) return;  
+      let parsedMainState = o.decodeUrl(frag);
+      if (!parsedMainState) // if failed try to decode it first
+        parsedMainState = o.decodeUrl(decodeURIComponent(frag));
       const n = prompt('Nama data:', parsedMainState?.title);
       if (!n || !n.trim()) return;
       applyItem(addItem(n.trim(), frag, selectedFolder));

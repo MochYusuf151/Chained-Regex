@@ -86,10 +86,7 @@
     let selectedFolder = null; // folder tujuan untuk item baru
 
     if (o.getMainState()) {
-      if (o.getMainState()?.id)
         sidebarState.activeItemId = o.getMainState()?.id;
-      else
-        o.getMainState().id = sidebarState.activeItemId;
     }
 
     function load() {

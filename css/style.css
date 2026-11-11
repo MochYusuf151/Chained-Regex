@@ -1361,6 +1361,10 @@ select {
     color: var(--accent);
 }
 
+.fsb-row.not-saved .fsb-name:after {
+    content: " *"
+}
+
 .fsb-row.over {
     background: var(--violet-dim);
     border-color: var(--violet);

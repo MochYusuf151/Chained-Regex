@@ -21,9 +21,9 @@
     reloadOnApply: false,            // true jika app kamu hanya membaca hash saat load
     toggleMount: null,   // selector/elemen, mis. '.topbar-inner'. null = tombol melayang di kiri atas
     // --- Titik integrasi: ubah agar cocok dengan kode kamu ---
-    getMainState: () => {},
-    decodeUrl: (url) => {},
-    encodeMainState: (state) => {},
+    getMainState: () => { },
+    decodeUrl: (url) => { },
+    encodeMainState: (state) => { },
     getFragment: () => location.hash.replace(/^#d=/g, ''),
     applyFragment: (frag) => {
       // default: set hash; event "hashchange" akan terpicu jika berbeda
@@ -47,8 +47,6 @@
     text = String(text || '').trim();
     const iHash = text.indexOf('#d=');
     const iQuery = text.indexOf('?d=');
-    console.log (iHash);
-    console.log (iQuery);
     if (iHash >= 0)
       return text.slice(iHash + 3).trim();
     else if (iQuery >= 0)
@@ -108,7 +106,7 @@
     root.innerHTML = `
       <div class="fsb-head"><h3></h3><button class="fsb-ico" data-role="close" title="Tutup" aria-label="Tutup">${icon('x')}</button></div>
       <div class="fsb-bar">
-        <button class="fsb-primary" data-role="save" title="Simpan data yang sedang terbuka">${icon('save')}Simpan</button>
+        <button class="fsb-primary" data-role="save" title="Simpan data yang sedang terbuka">${icon('save')}Save As</button>
         <span class="fsb-sep"></span>
         <button class="fsb-ico" data-role="folder" title="Folder baru" aria-label="Folder baru">${icon('folderPlus')}</button>
         <button class="fsb-ico" data-role="paste" title="Tempel URL" aria-label="Tempel URL">${icon('link')}</button>
@@ -171,13 +169,17 @@
       return item;
     }
     function applyItem(item, requireConfirm = false) {
+      sidebarState.activeItemId = item.id;
       const frag = o.getFragment();
       const matchedItem = sidebarState.items.find((x) => x.fragment === frag);
       if (!matchedItem) {
-        if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm)
+        if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm) {
           o.applyFragment(item.fragment);
-      } else
+        }
+      } else {
         o.applyFragment(item.fragment);
+      }
+      save();
       // o.loadData();
       // if (o.reloadOnApply) location.reload();
       // else render();
@@ -216,6 +218,8 @@
       // zona drop untuk kembali ke root
       tree.ondragover = (e) => { if (e.target === tree) e.preventDefault(); };
       tree.ondrop = (e) => { if (e.target === tree) dropOn(e, null); };
+      updateActiveItem();
+
     }
 
     function renderLevel(parentId) {
@@ -282,9 +286,9 @@
       const acts = document.createElement('span');
       acts.className = 'fsb-acts';
       acts.append(
-        actBtn('refresh', 'Timpa dengan data saat ini', () => {
-          if (!confirm(`Timpa "${it.name}" dengan data yang sedang terbuka?`)) return;
-          it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Diperbarui');
+        actBtn('save', 'Save with current data?', () => {
+          if (!confirm(`Save "${it.name}" with current data?`)) return;
+          it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Saved');
         }),
         actBtn('download', 'Simpan ke file', () => download(safeName(it.name) + '.txt', it.fragment)),
         actBtn('pencil', 'Ganti nama', () => { const n = prompt('Nama:', it.name); if (n && n.trim()) { it.name = n.trim(); save(); } }),
@@ -333,14 +337,14 @@
       save();
     }
 
-    function saveCurrent() {
+    function saveCurrentAs() {
       const frag = o.getFragment();
       if (!frag) return showToast('Empty fragment, no saved data');
       const dup = sidebarState.items.find((i) => i.fragment === frag);
       if (dup && !confirm(`Data ini sudah tersimpan sebagai "${dup.name}". Simpan salinan?`)) return;
-      const n = prompt('Nama data:', o.getMainState()?.title);
+      const n = prompt('Save As:', o.getMainState()?.title);
       if (!n || !n.trim()) return;
-      addItem(n.trim(), frag, selectedFolder);
+      applyItem(addItem(n.trim(), frag, selectedFolder));
       showToast('Tersimpan');
     }
 
@@ -348,7 +352,7 @@
       const urls = prompt('Paste complete URL or fragment (hostname will be ignored and multi url split by ;):');
       for (let url of urls.split(";")) {
         let frag = toFragment(url);
-        if (!frag) return;  
+        if (!frag) return;
         let parsedMainState = o.decodeUrl(frag);
         if (!parsedMainState) { // if failed try to decode it first
           parsedMainState = o.decodeUrl(decodeURIComponent(frag));
@@ -411,7 +415,7 @@
       if (!a) return;
       ({
         close: () => setOpen(false),
-        save: saveCurrent,
+        save: saveCurrentAs,
         folder: () => newFolder(selectedFolder),
         paste: pasteUrl,
         openfile: () => pickFile('open', '.txt,.url,.json,text/plain'),
@@ -422,18 +426,59 @@
 
     window.addEventListener('hashchange', render);
     window.addEventListener('hashchange', updateActiveItem);
+    window.addEventListener('keydown', function (e) {
+      // Escape
+      if (e.key === 'Escape' || e.key === 'Esc') { // 'Esc' disertakan untuk kompatibilitas browser/IE lama
+        // Hentikan perilaku default jika diperlukan (misal: keluar dari mode fullscreen)
+        e.preventDefault();
+        setOpen(false);        
+      }
+
+      // Ctrl + Shift + S
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        saveCurrentAs();
+      }
+
+      // Ctrl + S
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        const it = sidebarState.items.find((i) => i.id === sidebarState.activeItemId);
+        if (!it)
+          saveCurrentAs();
+        else {
+          if (it.fragment === o.getFragment()) {
+            showToast('No Changes');
+            save();
+            return;
+          }
+          it.fragment = o.getFragment();
+          it.updatedAt = Date.now();
+          save();
+          showToast('Saved');
+        }
+      }
+    });
     render();
 
     function updateActiveItem() {
       const currentlyActiveRow = root.querySelector(`.fsb-row.active`);
       const frag = o.getFragment();
-      const item = sidebarState.items.find((i) => i.fragment === frag);
+      const item = sidebarState.items.find((i) => sidebarState.activeItemId ? i.id === sidebarState.activeItemId : i.fragment === frag);
+      if (!sidebarState.activeItemId)
+        sidebarState.activeItemId = item.id;
+
       if (currentlyActiveRow)
         currentlyActiveRow.classList.toggle("active", false);
       if (!item) return;
       const activeRow = root.querySelector(`.fsb-row[data-id="${item.id}"]`);
-      if (activeRow)
+
+      if (activeRow) {
         activeRow.classList.toggle("active", true);
+        activeRow.classList.toggle("not-saved", frag !== item.fragment);
+      }
 
     }
 
@@ -454,6 +499,6 @@
     };
   }
 
-  
+
   global.FragmentSidebar = { init: create };
 })(window);

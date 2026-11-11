@@ -133,7 +133,7 @@
       </div>
       <div class="fsb-cur" title=""></div>
       <div class="fsb-tree"></div>
-      <div class="fsb-foot">Drag to move.</div>
+      <div class="fsb-foot">Drag to move. Click </div>
       <div class="fsb-showToast"></div>`;
     root.querySelector('h3').textContent = o.title;
     const tree = root.querySelector('.fsb-tree');
@@ -241,10 +241,8 @@
           o.applyFragment(item.fragment);
           sidebarState.activeItemId = item.id;
         }
-      } else if (confirm("Discard current pipeline and load selected?")) {
-        o.applyFragment(item.fragment);
+        save();
       }
-      save();
       // render();
       // o.loadData();
       // if (o.reloadOnApply) location.reload();
@@ -352,6 +350,12 @@
       const acts = document.createElement('span');
       acts.className = 'fsb-acts';
       acts.append(
+        actBtn('refresh', 'Load/Reset pipeline', () => {
+          if (!confirm(`Load "${it.name}" and discard current changes?`)) return;
+          o.applyFragment(it.fragment);
+          applyItem(it, true);
+          showToast('Loaded');
+        }),
         actBtn('save', 'Save with current data?', () => {
           if (!confirm(`Save "${it.name}" with current data?`)) return;
           it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Saved');

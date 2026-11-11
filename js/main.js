@@ -1903,6 +1903,7 @@
             getMainState: () => state,
             decodeUrl: decodeState,
             encodeMainState: encodeState,
+            updateUrl: persistToUrl,
         });
 
         window.addEventListener('hashchange', reloadUrl);

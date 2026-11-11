@@ -28,6 +28,7 @@
     getMainState: () => { },
     decodeUrl: (url) => { },
     encodeMainState: (state) => { },
+    updateUrl: () => {},
     getFragment: () => location.hash.replace(/^#d=/g, ''),
     applyFragment: (frag) => {
       // default: set hash; event "hashchange" akan terpicu jika berbeda
@@ -87,6 +88,14 @@
 
     if (o.getMainState()) {
         sidebarState.activeItemId = o.getMainState()?.id;
+        if (!sidebarState.activeItemId) {
+          const it = findSavedByFragment(o.getFragment());
+          if (it) {
+            console.log(it);
+            o.getMainState().id = it.id;
+            sidebarState.activeItemId = it.id;
+          }
+        }
     }
 
     function load() {

@@ -1358,8 +1358,10 @@ select {
 
 .fsb-row.active {
     background: var(--accent-dim);
-    border-color: var(--accent);
+    /* border-color: var(--accent); */
     color: var(--accent);
+    /* color: #08211b; */
+    font-weight: 600;
 }
 
 .fsb-row.not-saved .fsb-name:after {

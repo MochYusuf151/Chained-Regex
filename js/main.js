@@ -1708,6 +1708,7 @@
             docTitleLabel.textContent = 'Text Transformation Pipeline';
             document.title = 'Text Transformation Pipeline';
             renderAll();
+            fragmentSidebar.resetState();
         });
 
         document.getElementById('copyLinkBtn').addEventListener('click', () => {

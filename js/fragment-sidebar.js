@@ -218,13 +218,11 @@
     function applyItem(item, requireConfirm = false) {
       sidebarState.activeItemId = item.id;
       const frag = o.getFragment();
-      const matchedItem = sidebarState.items.find((x) => x.fragment === frag);
-      if (!matchedItem) {
+      if (frag !== item.frag) {
         if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm) {
           o.applyFragment(item.fragment);
+          
         }
-      } else {
-        o.applyFragment(item.fragment);
       }
       save();
       // o.loadData();
@@ -513,12 +511,14 @@
     function updateActiveItem() {
       const currentlyActiveRow = root.querySelector(`.fsb-row.active`);
       const frag = o.getFragment();
-      const item = sidebarState.items.find((i) => sidebarState.activeItemId ? i.id === sidebarState.activeItemId : i.fragment === frag);
-      if (!sidebarState.activeItemId)
-        sidebarState.activeItemId = item.id;
-
-      if (currentlyActiveRow)
+      
+      if (currentlyActiveRow) {
         currentlyActiveRow.classList.toggle("active", false);
+        currentlyActiveRow.classList.toggle("not-saved", false);
+      }
+      
+      const item = sidebarState.items.find((i) => i.id === sidebarState.activeItemId);
+
       if (!item) return;
       const activeRow = root.querySelector(`.fsb-row[data-id="${item.id}"]`);
 
@@ -533,6 +533,12 @@
       return sidebarState.items.find((x) => x.fragment === frag);
     }
 
+    function resetState(){
+      sidebarState.activeItemId = undefined;
+      updateActiveItem();
+      save();
+    }
+
 
     return {
       open: () => setOpen(true),
@@ -540,6 +546,7 @@
       toggle: () => setOpen(!root.classList.contains('open')),
       refresh: render,
       getState: () => JSON.parse(JSON.stringify(sidebarState)),
+      resetState: resetState,
       addItem, exportAll,
       updateActiveItem: updateActiveItem,
       findSavedByFragment: findSavedByFragment,

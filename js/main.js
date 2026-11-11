@@ -222,11 +222,11 @@
     const persistToUrl = debounce(function () {
         const stateStr = encodeState();
         if (!stateStr) return; // Abaikan jika kosong atau dibatasi (Limit 20k)
-        fragmentSidebar.updateActiveItem(stateStr);
 
         // Simpan ke hash fragment (#), pertahankan search query lain jika ada
         const newUrl = window.location.pathname + window.location.search + '#d=' + stateStr;
         history.replaceState({}, '', newUrl);
+        fragmentSidebar.updateActiveItem();
     }, 300);
 
     /* ============================= Regex / Script engine ============================= */
@@ -1910,6 +1910,8 @@
         docTitleLabel.textContent = state.title || 'Text Transformation Pipeline';
         document.title = state.title ? state.title + ' · Text Transformation Pipeline' : 'Text Transformation Pipeline';
         renderAll();
+        startIntroAnimation();
+        showToast(`"${state.title}" loaded`)
     }
 
     init();

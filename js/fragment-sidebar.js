@@ -14,23 +14,21 @@
   'use strict';
 
   const DEFAULTS = {
-    storageKey: 'fragstore.v1',      // kunci localStorage
-    openKey: 'fragstore.open',       // kunci status buka/tutup sidebar
-    title: 'Explorer',
+    storageKey: 'text-pipeline-collection.v1',      // kunci localStorage
+    openKey: 'text-pipeline-collection.open',       // kunci status buka/tutup sidebar
+    title: 'Saved Pipelies',
     mount: document.body,            // elemen tempat sidebar dipasang
     reloadOnApply: false,            // true jika app kamu hanya membaca hash saat load
     toggleMount: null,   // selector/elemen, mis. '.topbar-inner'. null = tombol melayang di kiri atas
     // --- Titik integrasi: ubah agar cocok dengan kode kamu ---
     getMainState: () => {},
     decodeUrl: () => {},
-    getFragment: () => location.hash.replace(/^#/, ''),
+    getFragment: () => location.hash.replace(/^#d=/g, ''),
     applyFragment: (frag) => {
       // default: set hash; event "hashchange" akan terpicu jika berbeda
-      console.log(frag);
-      const newUrl = window.location.pathname + window.location.search + '#' + frag;
+      const newUrl = window.location.pathname + window.location.search + '#d=' + frag;
       history.replaceState({}, '', newUrl);
       window.dispatchEvent(new HashChangeEvent('hashchange'));
-      console.log("apply fragment");
       // if (location.hash.replace(/^#/, '') === frag) {
       //   window.dispatchEvent(new HashChangeEvent('hashchange'));
       // } else {
@@ -46,8 +44,8 @@
   // Ambil fragment dari teks: bisa "#d=..", "d=..", atau URL lengkap (hostname dibuang)
   function toFragment(text) {
     text = String(text || '').trim();
-    const i = text.indexOf('#');
-    return (i >= 0 ? text.slice(i + 1) : text).trim();
+    const i = text.indexOf('#d=');
+    return (i >= 0 ? text.slice(i + 3) : text).trim();
   }
 
   const ICONS = {
@@ -81,7 +79,7 @@
         const s = JSON.parse(localStorage.getItem(o.storageKey));
         if (s && Array.isArray(s.folders) && Array.isArray(s.items)) return s;
       } catch (e) { /* abaikan */ }
-      return { format: 'fragstore', version: 1, folders: [], items: [] };
+      return { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
     }
     function save() {
       try { localStorage.setItem(o.storageKey, JSON.stringify(sidebarState)); }
@@ -125,7 +123,7 @@
     const toggle = document.createElement('button');
     toggle.className = 'fsb-toggle';
     toggle.innerHTML = icon('menu');
-    toggle.title = 'Data';
+    toggle.title = 'Saved Pipeline';
     toggle.setAttribute('aria-label', 'Buka sidebar data');
 
     o.mount.appendChild(root);
@@ -164,7 +162,13 @@
       return item;
     }
     function applyItem(item) {
-      o.applyFragment(item.fragment);
+      const frag = o.getFragment();
+      const matchedItem = sidebarState.items.find((x) => x.fragment === frag);
+      if (!matchedItem) {
+        if (confirm("Discard current pipeline and load selected?"))
+          o.applyFragment(item.fragment);
+      } else
+        o.applyFragment(item.fragment);
       // o.loadData();
       // if (o.reloadOnApply) location.reload();
       // else render();
@@ -189,7 +193,7 @@
     // ---------- Render ----------
     function render() {
       const cur = o.getFragment();
-      curEl.textContent = cur ? '#' + cur : '(fragment kosong)';
+      curEl.textContent = cur ? '#d=' + cur : '(fragment kosong)';
       curEl.title = cur ? '#' + cur : '';
       tree.textContent = '';
       if (!sidebarState.items.length && !sidebarState.folders.length) {
@@ -343,12 +347,12 @@
     }
 
     function exportAll() {
-      download('fragstore-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(sidebarState, null, 2), 'application/json');
+      download('text-pipeline-collection-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(sidebarState, null, 2), 'application/json');
     }
 
     // Gabungkan backup ke sidebarState saat ini, id di-remap agar tidak bentrok
     function mergeBackup(data, replace) {
-      if (replace) sidebarState = { format: 'fragstore', version: 1, folders: [], items: [] };
+      if (replace) sidebarState = { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
       const map = {};
       data.folders.forEach((f) => { map[f.id] = uid(); });
       data.folders.forEach((f) => sidebarState.folders.push({ id: map[f.id], name: String(f.name), parentId: map[f.parentId] || null }));
@@ -372,7 +376,7 @@
       const text = await file.text();
       let data = null;
       try { data = JSON.parse(text); } catch (e) { /* bukan JSON: perlakukan sebagai fragment */ }
-      if (data && data.format === 'fragstore' && Array.isArray(data.items) && Array.isArray(data.folders)) {
+      if (data && data.format === 'text-pipeline-collection' && Array.isArray(data.items) && Array.isArray(data.folders)) {
         const replace = confirm('Import backup.\nOK = ganti semua data saat ini\nBatal = gabungkan dengan data saat ini');
         mergeBackup(data, replace);
         showToast(`Diimpor: ${data.items.length} item, ${data.folders.length} folder`);
@@ -401,9 +405,10 @@
     });
 
     window.addEventListener('hashchange', render);
+    window.addEventListener('hashchange', updateActiveItem);
     render();
 
-    function updateActiveItem(data) {
+    function updateActiveItem() {
       const currentlyActiveRow = root.querySelector(`.fsb-row.active`);
       const frag = o.getFragment();
       const item = sidebarState.items.find((i) => i.fragment === frag);
@@ -416,6 +421,10 @@
 
     }
 
+    function findSavedByFragment(frag) {
+      return sidebarState.items.find((x) => x.fragment === frag);
+    }
+
 
     return {
       open: () => setOpen(true),
@@ -424,7 +433,8 @@
       refresh: render,
       getState: () => JSON.parse(JSON.stringify(sidebarState)),
       addItem, exportAll,
-      updateActiveItem: updateActiveItem
+      updateActiveItem: updateActiveItem,
+      findSavedByFragment: findSavedByFragment,
     };
   }
 

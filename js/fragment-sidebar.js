@@ -229,13 +229,20 @@
       return item;
     }
     function applyItem(item, requireConfirm = false) {
-      sidebarState.activeItemId = item.id;
       const frag = o.getFragment();
-      if (frag !== item.frag) {
-        if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm) {
+      const lastItem = findSavedById(sidebarState.activeItemId);
+      if (sidebarState.activeItemId !== item.id) {
+        if ((requireConfirm 
+            && ((!lastItem && frag && confirm("Discard current pipeline and load selected?")) 
+            || (lastItem.fragment !== frag && confirm("Discard current pipeline and load selected?")) // changes
+            || lastItem.fragment === frag)) // changes
+          || !requireConfirm) {
           // item.name = mainState.title;
           o.applyFragment(item.fragment);
+          sidebarState.activeItemId = item.id;
         }
+      } else if (confirm("Discard current pipeline and load selected?")) {
+        o.applyFragment(item.fragment);
       }
       save();
       // render();
@@ -552,6 +559,10 @@
 
     function findSavedByFragment(frag) {
       return sidebarState.items.find((x) => x.fragment === frag);
+    }
+
+    function findSavedById(id) {
+      return sidebarState.items.find((x) => x.id === id);
     }
 
     function resetState(){

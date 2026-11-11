@@ -170,11 +170,11 @@
       save();
       return item;
     }
-    function applyItem(item) {
+    function applyItem(item, requireConfirm = false) {
       const frag = o.getFragment();
       const matchedItem = sidebarState.items.find((x) => x.fragment === frag);
       if (!matchedItem) {
-        if (confirm("Discard current pipeline and load selected?"))
+        if ((requireConfirm && confirm("Discard current pipeline and load selected?")) || !requireConfirm)
           o.applyFragment(item.fragment);
       } else
         o.applyFragment(item.fragment);
@@ -291,7 +291,7 @@
         actBtn('trash', 'Hapus', () => { if (confirm(`Hapus "${it.name}"?`)) { sidebarState.items = sidebarState.items.filter((x) => x !== it); save(); } }, 'del')
       );
       row.append(name, acts);
-      row.onclick = () => applyItem(it);
+      row.onclick = () => applyItem(it, true);
       row.onkeydown = (e) => { if (e.key === 'Enter') applyItem(it); };
       wireDrag(row, 'item', it.id, null);
       return row;
@@ -345,19 +345,21 @@
     }
 
     function pasteUrl() {
-      const t = prompt('Paste complete URL or fragment (hostname will be ignored):');
-      let frag = toFragment(t);
-      if (!frag) return;  
-      let parsedMainState = o.decodeUrl(frag);
-      if (!parsedMainState) { // if failed try to decode it first
-        parsedMainState = o.decodeUrl(decodeURIComponent(frag));
-        if (parsedMainState)
-          frag = o.encodeMainState(parsedMainState);
+      const urls = prompt('Paste complete URL or fragment (hostname will be ignored and multi url split by ;):');
+      for (let url of urls.split(";")) {
+        let frag = toFragment(url);
+        if (!frag) return;  
+        let parsedMainState = o.decodeUrl(frag);
+        if (!parsedMainState) { // if failed try to decode it first
+          parsedMainState = o.decodeUrl(decodeURIComponent(frag));
+          if (parsedMainState)
+            frag = o.encodeMainState(parsedMainState);
 
+        }
+        const n = prompt('Nama data:', parsedMainState?.title);
+        if (!n || !n.trim()) return;
+        applyItem(addItem(n.trim(), frag, selectedFolder));
       }
-      const n = prompt('Nama data:', parsedMainState?.title);
-      if (!n || !n.trim()) return;
-      applyItem(addItem(n.trim(), frag, selectedFolder));
     }
 
     function exportAll() {

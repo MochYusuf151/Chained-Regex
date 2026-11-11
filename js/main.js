@@ -5,6 +5,7 @@
     let uidCounter = 0;
     let isPipelineRunning = false;
     let rerunQueued = false;
+    let fragmentSidebar;
     const MIN_RUNNING_MS = 200;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
 
@@ -221,6 +222,7 @@
     const persistToUrl = debounce(function () {
         const stateStr = encodeState();
         if (!stateStr) return; // Abaikan jika kosong atau dibatasi (Limit 20k)
+        fragmentSidebar.updateActiveItem(stateStr);
 
         // Simpan ke hash fragment (#), pertahankan search query lain jika ada
         const newUrl = window.location.pathname + window.location.search + '#d=' + stateStr;
@@ -1809,6 +1811,25 @@
         }
     }
 
+    function startIntroAnimation(){
+        startedRunningAt = performance.now();
+        if (!shimmerAnimation)
+            shimmerAnimation = document.getAnimations().find(a => a.animationName === 'dot-shimmer') || null;
+        // shimmerAnimation.currentTime = -1;
+        document.body.classList.toggle('running', true)
+        document.body.classList.toggle('stopping', false);
+        const remaining = Math.max(0, MIN_RUNNING_BG_MS - (performance.now() - startedRunningAt));
+        const remainingStopping = Math.max(0, MIN_RUNNING_BG_MS - ANIMATION_TRANSITION - (performance.now() - startedRunningAt));
+        startToStopTimer = setTimeout(() => {
+            document.body.classList.toggle('stopping', true);
+        }, remainingStopping);
+        stopTimer = setTimeout(() => {
+            document.body.classList.toggle('stopping', false);
+            document.body.classList.toggle('running', false);
+            shimmerAnimation.currentTime = 0;
+        }, remaining);
+    }
+
     const yieldToUI = () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
     let toastTimer;
@@ -1868,12 +1889,21 @@
     /* ============================= Init ============================= */
     function init() {
         state = loadFromUrl();
+        fragmentSidebar = FragmentSidebar.init({
+            showToast: (msg) => showToast(msg),
+            toggleMount: '.topbar-brand',
+            loadData: reloadUrl,
+            getMainState: () => state,
+            decodeUrl: decodeState,
+        });
         window.addEventListener('hashchange', reloadUrl);
         bindHeaderEvents();
         renderAll();
+        startIntroAnimation();
     }
 
     function reloadUrl() {
+        console.log("reload");
         state = loadFromUrl();
         titleField.value = state.title;
         descField.value = state.description;

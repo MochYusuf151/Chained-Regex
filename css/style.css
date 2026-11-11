@@ -51,127 +51,143 @@ body {
 
 /* Layer glow */
 .bg-glow {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
 }
 
 .blob {
-  position: absolute;
-  width: 70vmax;
-  height: 70vmax;
-  border-radius: 50%;
-  will-change: transform, opacity;
+    position: absolute;
+    width: 70vmax;
+    height: 70vmax;
+    border-radius: 50%;
+    will-change: transform, opacity;
 }
 
 .blob-mint {
-  top: -30vmax;
-  left: -20vmax;
-  background: radial-gradient(circle, rgba(var(--glow-mint), 0.32), transparent 65%);
-  opacity: 0.4;
-  /* animation: glow-mint 3s ease-in-out infinite alternate; */
+    top: -30vmax;
+    left: -20vmax;
+    background: radial-gradient(circle, rgba(var(--glow-mint), 0.32), transparent 65%);
+    opacity: 0.4;
+    /* animation: glow-mint 3s ease-in-out infinite alternate; */
 }
 
 .blob-violet {
-  top: -25vmax;
-  right: -25vmax;
-  background: radial-gradient(circle, rgba(var(--glow-violet), 0.32), transparent 65%);
-  opacity: 0.4;
-  /* animation: glow-violet 4s ease-in-out infinite alternate; */
+    top: -25vmax;
+    right: -25vmax;
+    background: radial-gradient(circle, rgba(var(--glow-violet), 0.32), transparent 65%);
+    opacity: 0.4;
+    /* animation: glow-violet 4s ease-in-out infinite alternate; */
 }
 
 /* Hanya opacity + scale kecil, tanpa translate */
 @keyframes glow-mint {
-  from { opacity: 0.3; transform: scale(0.96); }
-  to   { opacity: 0.4;   transform: scale(1.06); }
+    from {
+        opacity: 0.3;
+        transform: scale(0.96);
+    }
+
+    to {
+        opacity: 0.4;
+        transform: scale(1.06);
+    }
 }
 
 /* Fase berlawanan: saat mint redup, violet terang */
 @keyframes glow-violet {
-  from { opacity: 0.4;   transform: scale(1.06); }
-  to   { opacity: 0.3; transform: scale(0.96); }
+    from {
+        opacity: 0.4;
+        transform: scale(1.06);
+    }
+
+    to {
+        opacity: 0.3;
+        transform: scale(0.96);
+    }
 }
 
 /* Pola titik dasar (tetap seperti awal) */
 body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-  background-size: 22px 22px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
-          mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 70%);
 }
+
 /* Kilau putih: selalu ada tapi tersembunyi, menyala halus saat "running" */
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 1.8s cubic-bezier(0.2, 0.6, 0.3, 1); 
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.8s cubic-bezier(0.2, 0.6, 0.3, 1);
 
-  /* alpha diturunkan dari 0.9 ke 0.5 */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-  background-size: 22px 22px;
+    /* alpha diturunkan dari 0.9 ke 0.5 */
+    background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+    background-size: 22px 22px;
 
-   -webkit-mask-image:
-    linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, transparent 70%);
-          mask-image:
-    linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, transparent 70%);
+    -webkit-mask-image:
+        linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
+        linear-gradient(to bottom, #000 0%, transparent 70%);
+    mask-image:
+        linear-gradient(to bottom, transparent 0%, #000 20%, transparent 40%, transparent 100%),
+        linear-gradient(to bottom, #000 0%, transparent 70%);
 
-  /* layer 1 diulang tiap 50vh (jarak antar pita), layer 2 tetap fade ke bawah */
-  -webkit-mask-size: 100% 50vh, 100% 100%;
-          mask-size: 100% 50vh, 100% 100%;
-  -webkit-mask-repeat: repeat-y, no-repeat;
-          mask-repeat: repeat-y, no-repeat;
+    /* layer 1 diulang tiap 50vh (jarak antar pita), layer 2 tetap fade ke bawah */
+    -webkit-mask-size: 100% 50vh, 100% 100%;
+    mask-size: 100% 50vh, 100% 100%;
+    -webkit-mask-repeat: repeat-y, no-repeat;
+    mask-repeat: repeat-y, no-repeat;
 
-  -webkit-mask-composite: source-in;
-          mask-composite: intersect;
-  -webkit-mask-position: 0 0, 0 0;
-          mask-position: 0 0, 0 0;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    -webkit-mask-position: 0 0, 0 0;
+    mask-position: 0 0, 0 0;
 
-  animation: dot-shimmer 4s linear infinite;
-  animation-play-state: paused;
+    animation: dot-shimmer 4s linear infinite;
+    animation-play-state: paused;
 }
 
 body.running::before {
-  opacity: 0.7;
-  animation-play-state: running;
+    opacity: 0.7;
+    animation-play-state: running;
 }
 
 body.stopping::before {
-  opacity: 0;
+    opacity: 0;
 }
 
 @keyframes dot-shimmer {
-  from {
-    -webkit-mask-position: 0 0, 0 0;
-            mask-position: 0 0, 0 0;
-  }
-  to {
-    /* 100vh = 2x jarak ulang (50vh), jadi loop-nya mulus tanpa lompatan */
-    -webkit-mask-position: 0 100vh, 0 0;
-            mask-position: 0 100vh, 0 0;
-  }
+    from {
+        -webkit-mask-position: 0 0, 0 0;
+        mask-position: 0 0, 0 0;
+    }
+
+    to {
+        /* 100vh = 2x jarak ulang (50vh), jadi loop-nya mulus tanpa lompatan */
+        -webkit-mask-position: 0 100vh, 0 0;
+        mask-position: 0 100vh, 0 0;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blob {
-    animation: none;
-  }
+    .blob {
+        animation: none;
+    }
 
-  body::before {
-    animation: none;
-    opacity: 0;
-  }
+    body::before {
+        animation: none;
+        opacity: 0;
+    }
 }
 
 ::selection {
@@ -237,6 +253,13 @@ select {
 }
 
 /* Brand */
+
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -244,7 +267,9 @@ select {
     min-width: 0;
 }
 
-.brand img { flex-shrink: 0; }
+.brand img {
+    flex-shrink: 0;
+}
 
 .brand-text {
     display: flex;
@@ -312,7 +337,9 @@ select {
     border-radius: 8px;
 }
 
-.topbar .btn svg { flex-shrink: 0; }
+.topbar .btn svg {
+    flex-shrink: 0;
+}
 
 .topbar .btn-icon {
     width: 34px;
@@ -340,7 +367,8 @@ select {
     background: var(--panel-raised);
 }
 
-.btn:active, .btn.pressed {
+.btn:active,
+.btn.pressed {
     transform: translateY(1px);
     border-color: var(--text-faint);
 }
@@ -360,9 +388,10 @@ select {
 #runPipelineBtn {
     position: relative;
     overflow: hidden;
-    min-width: 128px; /* cegah lebar tombol loncat saat label berubah */
+    min-width: 128px;
+    /* cegah lebar tombol loncat saat label berubah */
     transition: background .2s ease, border-color .2s ease,
-                transform .05s ease, filter .3s ease;
+        transform .05s ease, filter .3s ease;
 }
 
 .icon-slot {
@@ -373,12 +402,12 @@ select {
     flex-shrink: 0;
 }
 
-.icon-slot > * {
+.icon-slot>* {
     position: absolute;
     inset: 0;
     margin: auto;
     transition: opacity .25s ease, scale .25s cubic-bezier(.4, 0, .2, 1),
-                rotate .25s cubic-bezier(.4, 0, .2, 1);
+        rotate .25s cubic-bezier(.4, 0, .2, 1);
 }
 
 .spinner {
@@ -399,7 +428,7 @@ select {
     position: absolute;
     inset: 0;
     background: linear-gradient(100deg,
-        transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+            transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
     transform: translateX(-100%);
     opacity: 0;
     transition: opacity .3s ease;
@@ -433,14 +462,29 @@ select {
 }
 
 @keyframes btn-spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
-@keyframes btn-shimmer { to { transform: translateX(100%); } }
+
+@keyframes btn-shimmer {
+    to {
+        transform: translateX(100%);
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
-    #runPipelineBtn::after { display: none; }
-    .spinner { animation-duration: 1.6s; }
+    #runPipelineBtn::after {
+        display: none;
+    }
+
+    .spinner {
+        animation-duration: 1.6s;
+    }
 }
 
 /* ------------- Button --------------- */
@@ -549,8 +593,10 @@ select {
     resize: vertical;
     min-height: 76px;
     line-height: 1.5;
-    -moz-tab-size: 4; /* Untuk Firefox */
-    tab-size: 4;      /* Untuk Chrome/Edge/Safari. Ubah ke 2 jika ingin lebih rapat */
+    -moz-tab-size: 4;
+    /* Untuk Firefox */
+    tab-size: 4;
+    /* Untuk Chrome/Edge/Safari. Ubah ke 2 jika ingin lebih rapat */
 }
 
 .input.mono,
@@ -652,9 +698,11 @@ select {
 }
 
 .stage-name {
-    flex: 1 1 auto;          /* ambil semua sisa ruang */
+    flex: 1 1 auto;
+    /* ambil semua sisa ruang */
     min-width: 60px;
-    max-width: none;         /* sebelumnya 220px */
+    max-width: none;
+    /* sebelumnya 220px */
     border: 1px solid transparent;
     background: transparent;
     color: var(--text);
@@ -662,7 +710,8 @@ select {
     font-size: 14.5px;
     padding: 4px 7px;
     border-radius: 6px;
-    text-overflow: ellipsis; /* nama super panjang tampil "..." saat tidak fokus */
+    text-overflow: ellipsis;
+    /* nama super panjang tampil "..." saat tidak fokus */
 }
 
 .stage-name:hover {
@@ -1126,20 +1175,42 @@ select {
 
 /* Responsive */
 @media (max-width: 1100px) {
-    .brand-sub { display: none; }
-    .topbar .btn:not(#runPipelineBtn) .btn-label { display: none; }
-    .topbar .btn:not(#runPipelineBtn):not(.btn-icon) { width: 34px; padding: 0; }
+    .brand-sub {
+        display: none;
+    }
+
+    .topbar .btn:not(#runPipelineBtn) .btn-label {
+        display: none;
+    }
+
+    .topbar .btn:not(#runPipelineBtn):not(.btn-icon) {
+        width: 34px;
+        padding: 0;
+    }
 }
 
 @media (max-width: 720px) {
-    .topbar-inner { flex-wrap: wrap; padding: 8px 12px; }
-    .topbar-actions { width: 100%; justify-content: space-between; }
-    .switch-label { display: none; }
+    .topbar-inner {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+    }
+
+    .topbar-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .switch-label {
+        display: none;
+    }
 }
 
 .selected-cell {
-    background-color: rgba(87, 224, 192, .08);; /* Warna biru muda, bisa disesuaikan */
-    outline: 1px solid #1976d2; /* Garis batas agar mirip Excel */
+    background-color: rgba(87, 224, 192, .08);
+    ;
+    /* Warna biru muda, bisa disesuaikan */
+    outline: 1px solid #1976d2;
+    /* Garis batas agar mirip Excel */
 }
 
 /* Efek visual saat file di-drag ke atas textarea */
@@ -1147,4 +1218,252 @@ select {
     border-color: var(--accent);
     background: var(--accent-dim);
     box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* ---------- Sidebar ---------- */
+.fsb {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 92vw;
+    z-index: 60; /* di atas .topbar (50), di bawah .toast (80) */
+    display: flex;
+    flex-direction: column;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--border);
+    color: var(--text);
+    font: 13px/1.4 var(--font-ui);
+    transform: translateX(-100%);
+    transition: transform .2s ease;
+}
+
+.fsb.open {
+    transform: none;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, .35);
+}
+
+.fsb * { box-sizing: border-box; }
+
+/* tombol dasar (ghost) */
+.fsb button {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-field);
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.fsb button:hover {
+    background: var(--panel-raised);
+    border-color: var(--text-faint);
+}
+
+.fsb button:focus-visible {
+    outline: 2px solid var(--violet);
+    outline-offset: 1px;
+}
+
+.fsb .fsb-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #08231b;
+}
+
+.fsb .fsb-primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+}
+
+.fsb .fsb-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--text-muted);
+}
+
+.fsb .fsb-ico:hover { color: var(--text); }
+
+/* header & toolbar */
+.fsb-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.fsb-head h3 {
+    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.fsb-head .fsb-ico { border-color: transparent; background: transparent; }
+
+.fsb-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.fsb-sep { flex: 1; }
+
+.fsb-cur {
+    padding: 8px 14px;
+    font: 11px var(--font-code);
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--border-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* tree */
+.fsb-tree {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+.fsb-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-field);
+    cursor: pointer;
+    transition: .12s ease;
+}
+
+.fsb-row:hover { background: var(--panel-alt); }
+
+.fsb-row.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.fsb-row.over {
+    background: var(--violet-dim);
+    border-color: var(--violet);
+}
+
+.fsb-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fsb-folder > .fsb-row .fsb-name { font-weight: 700; }
+
+.fsb-acts { display: none; gap: 2px; }
+
+.fsb-row:hover .fsb-acts,
+.fsb-row:focus-within .fsb-acts { display: flex; }
+
+.fsb-acts button {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 5px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.fsb-acts button:hover {
+    background: var(--panel-raised);
+    color: var(--text);
+}
+
+.fsb-acts button.del:hover {
+    background: var(--danger-dim);
+    color: var(--danger);
+}
+
+.fsb-kids {
+    margin-left: 14px;
+    padding-left: 4px;
+    border-left: 1px solid var(--border-soft);
+}
+
+.fsb-empty {
+    padding: 22px 14px;
+    text-align: center;
+    color: var(--text-faint);
+}
+
+.fsb-foot {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+/* tab pembuka */
+/* tombol hamburger */
+.fsb-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-field);
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.fsb-toggle svg { width: 18px; height: 18px; }
+
+.fsb-toggle:hover {
+    color: var(--text);
+    background: var(--panel-raised);
+    border-color: var(--text-faint);
+}
+
+.fsb-toggle:focus-visible {
+    outline: 2px solid var(--violet);
+    outline-offset: 1px;
+}
+
+/* default: melayang di kiri atas */
+.fsb-toggle:not(.inline) {
+    position: fixed;
+    top: 10px;
+    left: 12px;
+    z-index: 55;
+}
+
+/* di dalam topbar: ikut alur flex */
+.fsb-toggle.inline { flex: none; }
+
+.fsb-toggle:hover { color: var(--accent); background: var(--panel-raised); }
+
+.topbar-brand > .fsb-toggle { order: -1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .fsb, .fsb-row, .fsb button { transition: none; }
 }

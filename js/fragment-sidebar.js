@@ -22,7 +22,8 @@
     toggleMount: null,   // selector/elemen, mis. '.topbar-inner'. null = tombol melayang di kiri atas
     // --- Titik integrasi: ubah agar cocok dengan kode kamu ---
     getMainState: () => {},
-    decodeUrl: () => {},
+    decodeUrl: (url) => {},
+    encodeMainState: (state) => {},
     getFragment: () => location.hash.replace(/^#d=/g, ''),
     applyFragment: (frag) => {
       // default: set hash; event "hashchange" akan terpicu jika berbeda
@@ -285,7 +286,7 @@
           if (!confirm(`Timpa "${it.name}" dengan data yang sedang terbuka?`)) return;
           it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Diperbarui');
         }),
-        actBtn('download', 'Simpan ke file', () => download(safeName(it.name) + '.txt', '#' + it.fragment)),
+        actBtn('download', 'Simpan ke file', () => download(safeName(it.name) + '.txt', it.fragment)),
         actBtn('pencil', 'Ganti nama', () => { const n = prompt('Nama:', it.name); if (n && n.trim()) { it.name = n.trim(); save(); } }),
         actBtn('trash', 'Hapus', () => { if (confirm(`Hapus "${it.name}"?`)) { sidebarState.items = sidebarState.items.filter((x) => x !== it); save(); } }, 'del')
       );
@@ -345,11 +346,15 @@
 
     function pasteUrl() {
       const t = prompt('Paste complete URL or fragment (hostname will be ignored):');
-      const frag = toFragment(t);
+      let frag = toFragment(t);
       if (!frag) return;  
       let parsedMainState = o.decodeUrl(frag);
-      if (!parsedMainState) // if failed try to decode it first
+      if (!parsedMainState) { // if failed try to decode it first
         parsedMainState = o.decodeUrl(decodeURIComponent(frag));
+        if (parsedMainState)
+          frag = o.encodeMainState(parsedMainState);
+
+      }
       const n = prompt('Nama data:', parsedMainState?.title);
       if (!n || !n.trim()) return;
       applyItem(addItem(n.trim(), frag, selectedFolder));

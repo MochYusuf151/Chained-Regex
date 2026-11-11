@@ -133,11 +133,11 @@
     let state = defaultState();
 
     /* ---- URL encode/decode ---- */
-    function encodeState() {
+    function encodeState(stateToEncode = state) {
         try {
             const cleanedState = {
-                ...state,
-                stages: state.stages.map(stage => {
+                ...stateToEncode,
+                stages: stateToEncode.stages.map(stage => {
                     const { output, _computedInput, ...rest } = stage;
 
                     // Jika toggle 'Save to URL' MATI
@@ -1895,6 +1895,7 @@
             loadData: reloadUrl,
             getMainState: () => state,
             decodeUrl: decodeState,
+            encodeMainState: encodeState
         });
         window.addEventListener('hashchange', reloadUrl);
         bindHeaderEvents();

@@ -87,7 +87,10 @@
     let selectedFolder = null; // folder tujuan untuk item baru
 
     if (o.getMainState()) {
-        sidebarState.activeItemId = o.getMainState()?.id;
+        let targetId = o.getMainState()?.id;
+        let itId = findSavedById(targetId);
+        if (itId)
+          sidebarState.activeItemId = itId.id;
         if (!sidebarState.activeItemId) {
           const it = findSavedByFragment(o.getFragment());
           if (it) {
@@ -242,6 +245,8 @@
           sidebarState.activeItemId = item.id;
         }
         save();
+      } else {
+        sidebarState.activeItemId = item.id;
       }
       // render();
       // o.loadData();

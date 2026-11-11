@@ -1745,7 +1745,7 @@
         });
 
         window.addEventListener('keydown', (event) => {
-            if (event.key === 'F8') {
+            if (event.key === 'F8' || ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'enter')) {
                 event.preventDefault();
                 const runPipelineBtn = document.getElementById('runPipelineBtn');
                 refreshAllOutputs(true);
@@ -1753,11 +1753,10 @@
                 showToast('Pipeline executed');
                 setTimeout(() => runPipelineBtn.classList.toggle("pressed", false), 320);
             }
-        });
 
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'F9') {
+            if (event.key === 'F9' || ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c')) {
                 event.preventDefault();
+                event.stopPropagation();
                 const copyResultBtn = document.getElementById('copyResultBtn');
                 copyResultBtn.classList.toggle("pressed", true);
                 setTimeout(() => {
@@ -1788,7 +1787,7 @@
             btnShimmerAnimation = document.getAnimations().find(a => a.animationName === 'btn-shimmer') || null;
         runPipelineBtn.classList.toggle('is-running', isRunning);
         runPipelineBtn.setAttribute('aria-busy', String(isRunning));
-        runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline (F8)';
+        runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
 
         if (isRunning) {
             startedRunningAt = performance.now();
@@ -1798,7 +1797,7 @@
             document.body.classList.toggle('stopping', false);
             runPipelineBtn.classList.toggle('is-running', isRunning);
             runPipelineBtn.setAttribute('aria-busy', String(isRunning));
-            runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline (F8)';
+            runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
         } else {
             const remaining = Math.max(0, MIN_RUNNING_BG_MS - (performance.now() - startedRunningAt));
             const remainingStopping = Math.max(0, MIN_RUNNING_BG_MS - ANIMATION_TRANSITION - (performance.now() - startedRunningAt));

@@ -1745,7 +1745,7 @@
         });
 
         window.addEventListener('keydown', (event) => {
-            if (event.key === 'F8' || ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'enter')) {
+            if (event.key === 'F8' || ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'enter')) {
                 event.preventDefault();
                 const runPipelineBtn = document.getElementById('runPipelineBtn');
                 refreshAllOutputs(true);
@@ -1754,7 +1754,7 @@
                 setTimeout(() => runPipelineBtn.classList.toggle("pressed", false), 320);
             }
 
-            if (event.key === 'F9' || ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c')) {
+            if (event.key === 'F9' || ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'c')) {
                 event.preventDefault();
                 event.stopPropagation();
                 const copyResultBtn = document.getElementById('copyResultBtn');

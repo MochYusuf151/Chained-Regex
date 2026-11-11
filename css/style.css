@@ -1232,13 +1232,35 @@ select {
     z-index: 60; /* di atas .topbar (50), di bawah .toast (80) */
     display: flex;
     flex-direction: column;
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    background:
+        radial-gradient(240% 55% at 0% 100%, rgba(var(--glow-violet), .18), transparent 70%),
+        /* radial-gradient(100% 45% at 100% 100%, rgba(var(--glow-violet), .14), transparent 75%), */
+        linear-gradient(to top, rgba(var(--glow-mint), .06), transparent 45%),
+        color-mix(in srgb, var(--bg-base) 94%, transparent);
     backdrop-filter: blur(10px);
     border-right: 1px solid var(--border);
     color: var(--text);
     font: 13px/1.4 var(--font-ui);
     transform: translateX(-100%);
     transition: transform .2s ease;
+}
+
+.fsb::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1; /* di atas background, di bawah isi sidebar */
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.6px);
+    background-size: 16px 16px;
+    background-position: 8px 8px;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, .55) 25%, transparent 65%);
+            mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, .55) 25%, transparent 65%);
+}
+
+.fsb-foot {
+    background: color-mix(in srgb, var(--bg-base) 70%, transparent);
+    backdrop-filter: blur(6px);
 }
 
 .fsb.open {

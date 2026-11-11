@@ -120,7 +120,7 @@
       </div>
       <div class="fsb-cur" title=""></div>
       <div class="fsb-tree"></div>
-      <div class="fsb-foot">Seret untuk memindahkan.</div>
+      <div class="fsb-foot">Drag to move.</div>
       <div class="fsb-showToast"></div>`;
     root.querySelector('h3').textContent = o.title;
     const tree = root.querySelector('.fsb-tree');

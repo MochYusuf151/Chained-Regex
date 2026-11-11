@@ -1226,7 +1226,8 @@ select {
     top: 0;
     left: 0;
     bottom: 0;
-    width: 320px;
+    min-width: 320px;
+    width: var(--fsb-w, 320px);
     max-width: 92vw;
     z-index: 60; /* di atas .topbar (50), di bawah .toast (80) */
     display: flex;
@@ -1467,6 +1468,44 @@ select {
 .fsb-toggle:hover { color: var(--accent); background: var(--panel-raised); }
 
 .topbar-brand > .fsb-toggle { order: -1; }
+
+/* handle resize */
+.fsb-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -4px;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    z-index: 2;
+}
+
+.fsb-resizer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 2px;
+    background: transparent;
+    transition: background .15s ease;
+}
+
+.fsb-resizer:hover::after,
+.fsb-resizer:focus-visible::after,
+body.fsb-resizing .fsb-resizer::after {
+    background: var(--accent);
+}
+
+.fsb-resizer:focus-visible { outline: none; }
+
+body.fsb-resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+body.fsb-resizing .fsb { transition: none; }
 
 @media (prefers-reduced-motion: reduce) {
     .fsb, .fsb-row, .fsb button { transition: none; }

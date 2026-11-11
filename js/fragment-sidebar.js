@@ -20,6 +20,10 @@
     mount: document.body,            // elemen tempat sidebar dipasang
     reloadOnApply: false,            // true jika app kamu hanya membaca hash saat load
     toggleMount: null,   // selector/elemen, mis. '.topbar-inner'. null = tombol melayang di kiri atas
+    widthKey: 'fragstore.width',
+    defaultWidth: 320,
+    minWidth: 240,
+    maxWidth: 640,
     // --- Titik integrasi: ubah agar cocok dengan kode kamu ---
     getMainState: () => { },
     decodeUrl: (url) => { },
@@ -145,6 +149,49 @@
     }
     toggle.onclick = () => setOpen(true);
     setOpen(localStorage.getItem(o.openKey) === '1');
+
+     // ---------- Resize ----------
+    const resizer = document.createElement('div');
+    resizer.className = 'fsb-resizer';
+    resizer.tabIndex = 0;
+    resizer.setAttribute('role', 'separator');
+    resizer.setAttribute('aria-orientation', 'vertical');
+    resizer.setAttribute('aria-label', 'Ubah lebar sidebar');
+    resizer.title = 'Seret untuk mengubah lebar (klik 2x untuk reset)';
+    root.appendChild(resizer);
+
+    const clampW = (w) => Math.round(Math.min(Math.min(o.maxWidth, window.innerWidth * 0.92), Math.max(o.minWidth, w)));
+
+    function setWidth(w, persist) {
+      w = clampW(w);
+      root.style.setProperty('--fsb-w', w + 'px');
+      resizer.setAttribute('aria-valuenow', w);
+      if (persist) { try { localStorage.setItem(o.widthKey, String(w)); } catch (e) {} }
+      return w;
+    }
+
+    setWidth(parseInt(localStorage.getItem(o.widthKey), 10) || o.defaultWidth);
+
+    resizer.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      resizer.setPointerCapture(e.pointerId);
+      document.body.classList.add('fsb-resizing');
+    });
+    resizer.addEventListener('pointermove', (e) => {
+      if (!resizer.hasPointerCapture(e.pointerId)) return;
+      setWidth(e.clientX - root.getBoundingClientRect().left);
+    });
+    const endDrag = (e) => {
+      if (!resizer.hasPointerCapture(e.pointerId)) return;
+      resizer.releasePointerCapture(e.pointerId);
+      document.body.classList.remove('fsb-resizing');
+      setWidth(root.getBoundingClientRect().width, true);
+    };
+    resizer.addEventListener('pointerup', endDrag);
+    resizer.addEventListener('pointercancel', endDrag);
+
+    resizer.addEventListener('dblclick', () => setWidth(o.defaultWidth, true));
+    window.addEventListener('resize', () => setWidth(root.getBoundingClientRect().width));
 
     let showToastTimer;
     function showToast(msg) {
@@ -278,7 +325,7 @@
       row.className = 'fsb-row' + (active ? ' active' : '');
       row.draggable = true;
       row.tabIndex = 0;
-      row.title = '#' + it.fragment.slice(0, 120);
+      row.title = it.name;
       row.dataset.id = it.id;
       const name = document.createElement('span');
       name.className = 'fsb-name';
@@ -360,7 +407,7 @@
             frag = o.encodeMainState(parsedMainState);
 
         }
-        const n = prompt('Nama data:', parsedMainState?.title);
+        const n = prompt('Save as:', parsedMainState?.title);
         if (!n || !n.trim()) return;
         applyItem(addItem(n.trim(), frag, selectedFolder));
       }
@@ -431,7 +478,7 @@
       if (e.key === 'Escape' || e.key === 'Esc') { // 'Esc' disertakan untuk kompatibilitas browser/IE lama
         // Hentikan perilaku default jika diperlukan (misal: keluar dari mode fullscreen)
         e.preventDefault();
-        setOpen(false);        
+        setOpen(!root.classList.contains("open"));        
       }
 
       // Ctrl + Shift + S
@@ -452,12 +499,12 @@
           if (it.fragment === o.getFragment()) {
             showToast('No Changes');
             save();
-            return;
+          }else {
+            it.fragment = o.getFragment();
+            it.updatedAt = Date.now();
+            save();
+            showToast('Saved');
           }
-          it.fragment = o.getFragment();
-          it.updatedAt = Date.now();
-          save();
-          showToast('Saved');
         }
       }
     });

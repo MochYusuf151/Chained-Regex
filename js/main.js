@@ -1731,7 +1731,14 @@
             e.target.classList.toggle('copying', true);
             clearTimeout(copyingTimeout);
             copyingTimeout = setTimeout(() => {
-                navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
+                startBackgroundAnimation();
+                let clipboardData = state.stages[state.stages.length - 1].output;
+                navigator.clipboard.writeText(clipboardData).then(() => {
+                    if (!clipboardData || clipboardData.trim() === "")
+                        showToast('Pipeline Output Copied but The Output Data is Empty. Is The Pipeline Already Executed?')
+                    else
+                        showToast('Pipeline Output Copied')
+                });
                 e.target.classList.toggle('copying', false);
             }, 320);
         });
@@ -1815,8 +1822,10 @@
         }
     }
 
-    function startIntroAnimation(){
+    function startBackgroundAnimation(){
         startedRunningAt = performance.now();
+        clearTimeout(stopTimer);
+        clearTimeout(startToStopTimer);
         if (!shimmerAnimation)
             shimmerAnimation = document.getAnimations().find(a => a.animationName === 'dot-shimmer') || null;
         // shimmerAnimation.currentTime = -1;
@@ -1910,7 +1919,7 @@
         window.addEventListener('hashchange', reloadUrl);
         bindHeaderEvents();
         renderAll();
-        startIntroAnimation();
+        startBackgroundAnimation();
 
         // if (!state.id) {
         //     state.id = pipelineManager.getActiveItem()?.id;
@@ -1927,7 +1936,7 @@
         docTitleLabel.textContent = state.title || 'Text Transformation Pipeline';
         document.title = state.title ? state.title + ' · Text Transformation Pipeline' : 'Text Transformation Pipeline';
         renderAll();
-        startIntroAnimation();
+        startBackgroundAnimation();
         showToast(`"${state.title}" loaded`)
         if (upgradeData()) {
             showToast(`Fill missing data to "${state.title}"`)

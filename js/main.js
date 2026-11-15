@@ -5,7 +5,7 @@
     let uidCounter = 0;
     let isPipelineRunning = false;
     let rerunQueued = false;
-    let fragmentSidebar;
+    let pipelineManager;
     const MIN_RUNNING_MS = 200;
     const AUTO_COMPUTE_CHAR_LIMIT = 10000;
 
@@ -137,7 +137,7 @@
     function encodeState(stateToEncode = state) {
         try {
             // if (!stateToEncode.id)
-            //     stateToEncode.id = fragmentSidebar.getActiveItem()?.id;
+            //     stateToEncode.id = pipelineManager.getActiveItem()?.id;
             const cleanedState = {
                 ...stateToEncode,
                 stages: stateToEncode.stages.map(stage => {
@@ -195,7 +195,7 @@
             if (!parsed || !Array.isArray(parsed.stages)) return null;
             parsed.stages = parsed.stages.map(s => defaultStage(s));
             // if (!parsed.id)
-            //     parsed.id = fragmentSidebar.getActiveItem()?.id;
+            //     parsed.id = pipelineManager.getActiveItem()?.id;
             return parsed;
         } catch (e) { return null; }
     }
@@ -232,7 +232,7 @@
         // Simpan ke hash fragment (#), pertahankan search query lain jika ada
         const newUrl = window.location.pathname + window.location.search + '#d=' + stateStr;
         history.replaceState({}, '', newUrl);
-        fragmentSidebar.updateActiveItem();
+        pipelineManager.updateActiveItem();
     }, 300);
 
     /* ============================= Regex / Script engine ============================= */
@@ -1715,7 +1715,7 @@
             docTitleLabel.textContent = 'Text Transformation Pipeline';
             document.title = 'Text Transformation Pipeline';
             renderAll();
-            fragmentSidebar.resetState();
+            pipelineManager.resetState();
         });
 
         document.getElementById('copyLinkBtn').addEventListener('click', () => {
@@ -1900,7 +1900,7 @@
     /* ============================= Init ============================= */
     function init() {
         state = loadFromUrl();
-        fragmentSidebar = FragmentSidebar.init({
+        pipelineManager = PipelineManager.init({
             showToast: (msg) => showToast(msg),
             toggleMount: '.topbar-brand',
             loadData: reloadUrl,
@@ -1916,7 +1916,7 @@
         startIntroAnimation();
 
         // if (!state.id) {
-        //     state.id = fragmentSidebar.getActiveItem()?.id;
+        //     state.id = pipelineManager.getActiveItem()?.id;
         //     if (state.id)
         //         persistToUrl();
         // }
@@ -1937,7 +1937,7 @@
             persistToUrl();
         }
         // if (!state.id) {
-        //     state.id = fragmentSidebar.getActiveItem()?.id;
+        //     state.id = pipelineManager.getActiveItem()?.id;
         //     if (state.id)
         //         persistToUrl();
         // }

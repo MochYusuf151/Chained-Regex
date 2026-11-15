@@ -1,10 +1,10 @@
 /*!
- * fragment-sidebar.js — pengelola data URL fragment (#d=...) dalam sidebar.
+ * pipeline-manager.js — pengelola data URL fragment (#d=...) dalam sidebar.
  * Vanilla JS, tanpa dependensi. CSS di-inject otomatis (prefix .fsb-).
  *
  * Pakai:
- *   <script src="fragment-sidebar.js"></script>
- *   <script>FragmentSidebar.init();</script>
+ *   <script src="pipeline-manager.js"></script>
+ *   <script>PipelineManager.init();</script>
  *
  * Yang disimpan hanya fragment (mis. "d=N4Ig..."), TANPA hostname/path,
  * jadi data sama bisa dipakai di localhost maupun github.io.
@@ -41,7 +41,7 @@
       //   location.hash = frag;
       // }
     },
-    onChange: null,                  // callback (sidebarState) setiap data berubah
+    onChange: null,                  // callback (pipelineManagerState) setiap data berubah
   };
 
   const uid = () =>
@@ -82,7 +82,7 @@
     const o = Object.assign({}, DEFAULTS, opts || {});
 
     // ---------- State & storage ----------
-    let sidebarState = load();
+    let pipelineManagerState = load();
     const expanded = new Set();
     let selectedFolder = null; // folder tujuan untuk item baru
     let pendingScroll = false;
@@ -93,14 +93,14 @@
       while (id && !seen.has(id)) {
         seen.add(id);
         expanded.add(id);
-        id = sidebarState.folders.find(x => x.id === id)?.parentId ?? null;
+        id = pipelineManagerState.folders.find(x => x.id === id)?.parentId ?? null;
       }
       pendingScroll = true;
     }
 
     // folder penampung untuk item/folder yang sedang aktif
     function activeContainer() {
-      if (sidebarState.activeItemId) return sidebarState.items.find(i => i.id === sidebarState.activeItemId)?.folderId;
+      if (pipelineManagerState.activeItemId) return pipelineManagerState.items.find(i => i.id === pipelineManagerState.activeItemId)?.folderId;
       return selectedFolder;
     }
 
@@ -118,16 +118,16 @@
     
 
     if (o.getMainState()) {
-        sidebarState.activeItemId = undefined;
+        pipelineManagerState.activeItemId = undefined;
         let targetId = o.getMainState()?.id;
         let itId = findSavedById(targetId);
         if (itId)
-          sidebarState.activeItemId = itId.id;
-        if (!sidebarState.activeItemId) {
+          pipelineManagerState.activeItemId = itId.id;
+        if (!pipelineManagerState.activeItemId) {
           const it = findSavedByFragment(o.getFragment());
           if (it) {
             o.getMainState().id = it.id;
-            sidebarState.activeItemId = it.id;
+            pipelineManagerState.activeItemId = it.id;
           }
         }
     }
@@ -142,14 +142,14 @@
       return { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
     }
     function save() {
-      let currentActiveStateId = sidebarState.activeItemId;
-      sidebarState.activeItemId = undefined;
-      try { localStorage.setItem(o.storageKey, JSON.stringify(sidebarState)); }
-      catch (e) { showToast('Gagal menyimpan: localStorage penuh atau diblokir'); }
+      let currentActiveStateId = pipelineManagerState.activeItemId;
+      pipelineManagerState.activeItemId = undefined;
+      try { localStorage.setItem(o.storageKey, JSON.stringify(pipelineManagerState)); }
+      catch (e) { showToast('Saving Failed: localStorage full or blocked'); }
       finally {
-        sidebarState.activeItemId = currentActiveStateId;
+        pipelineManagerState.activeItemId = currentActiveStateId;
       }
-      if (o.onChange) o.onChange(sidebarState);
+      if (o.onChange) o.onChange(pipelineManagerState);
       render();
     }
 
@@ -164,7 +164,7 @@
     root.innerHTML = `
       <div class="fsb-head"><h3></h3><button class="fsb-ico" data-role="close" title="Tutup" aria-label="Tutup">${icon('x')}</button></div>
       <div class="fsb-bar">
-        <button class="fsb-primary" data-role="save" title="Simpan data yang sedang terbuka">${icon('save')}Save As</button>
+        <button class="fsb-primary" data-role="save" title="Save current pipeline as">${icon('save')}Save As</button>
         <span class="fsb-sep"></span>
         <button class="fsb-ico" data-role="folder" title="Folder baru" aria-label="Folder baru">${icon('folderPlus')}</button>
         <button class="fsb-ico" data-role="paste" title="Tempel URL" aria-label="Tempel URL">${icon('link')}</button>
@@ -253,7 +253,7 @@
     }
 
     // ---------- Operasi data ----------
-    const folderById = (id) => sidebarState.folders.find((f) => f.id === id);
+    const folderById = (id) => pipelineManagerState.folders.find((f) => f.id === id);
     const download = (name, text, type) => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([text], { type: type || 'text/plain' }));
@@ -265,14 +265,14 @@
 
     function addItem(name, fragment, folderId) {
       const item = { id: uid(), name, fragment, folderId: folderId || null, updatedAt: Date.now() };
-      sidebarState.items.push(item);
+      pipelineManagerState.items.push(item);
       save();
       return item;
     }
     function applyItem(item, requireConfirm = false) {
       const frag = o.getFragment();
-      const lastItem = findSavedById(sidebarState.activeItemId);
-      if (sidebarState.activeItemId !== item.id) {
+      const lastItem = findSavedById(pipelineManagerState.activeItemId);
+      if (pipelineManagerState.activeItemId !== item.id) {
         if ((requireConfirm 
             && ((!lastItem && frag && confirm("Discard current pipeline and load selected?")) 
             || (lastItem.fragment !== frag && confirm("Discard current pipeline and load selected?")) // changes
@@ -280,11 +280,11 @@
           || !requireConfirm) {
           // item.name = mainState.title;
           o.applyFragment(item.fragment);
-          sidebarState.activeItemId = item.id;
+          pipelineManagerState.activeItemId = item.id;
         }
         save();
       } else {
-        sidebarState.activeItemId = item.id;
+        pipelineManagerState.activeItemId = item.id;
       }
       // render();
       // o.loadData();
@@ -300,10 +300,10 @@
     function removeFolder(id) {
       const f = folderById(id);
       if (!f) return;
-      if (!confirm(`Hapus folder "${f.name}"? Isinya dipindah ke level di atasnya.`)) return;
-      sidebarState.folders.forEach((x) => { if (x.parentId === id) x.parentId = f.parentId || null; });
-      sidebarState.items.forEach((x) => { if (x.folderId === id) x.folderId = f.parentId || null; });
-      sidebarState.folders = sidebarState.folders.filter((x) => x.id !== id);
+      if (!confirm(`Delete folder "${f.name}"? All content will be moved to one level above.`)) return;
+      pipelineManagerState.folders.forEach((x) => { if (x.parentId === id) x.parentId = f.parentId || null; });
+      pipelineManagerState.items.forEach((x) => { if (x.folderId === id) x.folderId = f.parentId || null; });
+      pipelineManagerState.folders = pipelineManagerState.folders.filter((x) => x.id !== id);
       if (selectedFolder === id) selectedFolder = null;
       save();
     }
@@ -311,13 +311,13 @@
     // ---------- Render ----------
     function render() {
       const cur = o.getFragment();
-      curEl.textContent = cur ? '#d=' + cur : '(fragment kosong)';
+      curEl.textContent = cur ? '#d=' + cur : '(empty fragment data)';
       curEl.title = cur ? '#' + cur : '';
       tree.textContent = '';
-      if (!sidebarState.items.length && !sidebarState.folders.length) {
+      if (!pipelineManagerState.items.length && !pipelineManagerState.folders.length) {
         const e = document.createElement('div');
         e.className = 'fsb-empty';
-        e.textContent = 'Belum ada data tersimpan. Klik "Simpan saat ini" untuk menyimpan pipeline yang sedang terbuka.';
+        e.textContent = 'No Data. Click "Save As" to save currently open pipeline.';
         tree.appendChild(e);
         return;
       }
@@ -337,8 +337,8 @@
     function renderLevel(parentId) {
       const frag = document.createDocumentFragment();
       const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true });
-      sidebarState.folders.filter((f) => (f.parentId || null) === parentId).sort(byName).forEach((f) => frag.appendChild(renderFolder(f)));
-      sidebarState.items.filter((i) => (i.folderId || null) === parentId).sort(byName).forEach((i) => frag.appendChild(renderItem(i)));
+      pipelineManagerState.folders.filter((f) => (f.parentId || null) === parentId).sort(byName).forEach((f) => frag.appendChild(renderFolder(f)));
+      pipelineManagerState.items.filter((i) => (i.folderId || null) === parentId).sort(byName).forEach((i) => frag.appendChild(renderItem(i)));
       return frag;
     }
 
@@ -354,11 +354,11 @@
       if (selectedFolder === f.id) return true;
 
       // subfolder
-      const subs = sidebarState.folders.filter(x => x.parent === f.id);
+      const subs = pipelineManagerState.folders.filter(x => x.parent === f.id);
       if (subs.some(hasActive)) return true;
 
       // item/file di dalam folder (hapus bagian ini jika tidak ada item aktif)
-      if (sidebarState.activeItemId && sidebarState.items.some(i => i.id === sidebarState.activeItemId && i.folderId === f.id)) return true;
+      if (pipelineManagerState.activeItemId && pipelineManagerState.items.some(i => i.id === pipelineManagerState.activeItemId && i.folderId === f.id)) return true;
 
       return false;
     }
@@ -379,9 +379,9 @@
       const acts = document.createElement('span');
       acts.className = 'fsb-acts';
       acts.append(
-        actBtn('pencil', 'Ganti nama', () => { const n = prompt('Nama folder:', f.name); if (n && n.trim()) { f.name = n.trim(); save(); } }),
-        actBtn('plus', 'Subfolder', () => newFolder(f.id)),
-        actBtn('trash', 'Hapus', () => removeFolder(f.id), 'del')
+        actBtn('pencil', 'Rename', () => { const n = prompt('Nama folder:', f.name); if (n && n.trim()) { f.name = n.trim(); save(); } }),
+        actBtn('plus', 'Create Subfolder', () => newFolder(f.id)),
+        actBtn('trash', 'Delete', () => removeFolder(f.id), 'del')
       );
       row.append(name, acts);
 
@@ -427,9 +427,9 @@
           if (!confirm(`Save "${it.name}" with current data?`)) return;
           it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Saved');
         }),
-        actBtn('download', 'Simpan ke file', () => download(safeName(it.name) + '.txt', it.fragment)),
-        actBtn('pencil', 'Ganti nama', () => { const n = prompt('Nama:', it.name); if (n && n.trim()) { it.name = n.trim(); save(); } }),
-        actBtn('trash', 'Hapus', () => { if (confirm(`Hapus "${it.name}"?`)) { sidebarState.items = sidebarState.items.filter((x) => x !== it); save(); } }, 'del')
+        actBtn('download', 'Save to file', () => download(safeName(it.name) + '.txt', it.fragment)),
+        actBtn('pencil', 'Rename', () => { const n = prompt('Nama:', it.name); if (n && n.trim()) { it.name = n.trim(); save(); } }),
+        actBtn('trash', 'Delete', () => { if (confirm(`Hapus "${it.name}"?`)) { pipelineManagerState.items = pipelineManagerState.items.filter((x) => x !== it); save(); } }, 'del')
       );
       row.append(name, acts);
       row.onclick = () => applyItem(it, true);
@@ -455,10 +455,10 @@
       e.preventDefault();
       const [kind, id] = (e.dataTransfer.getData('text/fsb') || ':').split(':');
       if (kind === 'item') {
-        const it = sidebarState.items.find((x) => x.id === id);
+        const it = pipelineManagerState.items.find((x) => x.id === id);
         if (it) { it.folderId = folderId; save(); }
       } else if (kind === 'folder' && id !== folderId) {
-        if (folderId && isDescendant(folderId, id)) return showToast('Tidak bisa memindahkan folder ke dalam dirinya');
+        if (folderId && isDescendant(folderId, id)) return showToast('Cannot move folder into it self');
         const f = folderById(id);
         if (f) { f.parentId = folderId; save(); }
       }
@@ -469,7 +469,7 @@
       const n = prompt('Nama folder:');
       if (!n || !n.trim()) return;
       const f = { id: uid(), name: n.trim(), parentId: parentId || null };
-      sidebarState.folders.push(f);
+      pipelineManagerState.folders.push(f);
       expanded.delete(f.id);
       save();
     }
@@ -477,8 +477,8 @@
     function saveCurrentAs() {
       const frag = o.getFragment();
       if (!frag) return showToast('Empty fragment, no saved data');
-      const dup = sidebarState.items.find((i) => i.fragment === frag);
-      if (dup && !confirm(`Data ini sudah tersimpan sebagai "${dup.name}". Simpan salinan?`)) return;
+      const dup = pipelineManagerState.items.find((i) => i.fragment === frag);
+      if (dup && !confirm(`Data already saved as "${dup.name}". Save copy?`)) return;
       const n = prompt('Save As:', o.getMainState()?.title);
       if (!n || !n.trim()) return;
       applyItem(addItem(n.trim(), frag, selectedFolder));
@@ -504,16 +504,16 @@
     }
 
     function exportAll() {
-      download('text-pipeline-collection-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(sidebarState, null, 2), 'application/json');
+      download('text-pipeline-collection-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(pipelineManagerState, null, 2), 'application/json');
     }
 
-    // Gabungkan backup ke sidebarState saat ini, id di-remap agar tidak bentrok
+    // Gabungkan backup ke pipelineManagerState saat ini, id di-remap agar tidak bentrok
     function mergeBackup(data, replace) {
-      if (replace) sidebarState = { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
+      if (replace) pipelineManagerState = { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
       const map = {};
       data.folders.forEach((f) => { map[f.id] = uid(); });
-      data.folders.forEach((f) => sidebarState.folders.push({ id: map[f.id], name: String(f.name), parentId: map[f.parentId] || null }));
-      data.items.forEach((i) => sidebarState.items.push({
+      data.folders.forEach((f) => pipelineManagerState.folders.push({ id: map[f.id], name: String(f.name), parentId: map[f.parentId] || null }));
+      data.items.forEach((i) => pipelineManagerState.items.push({
         id: uid(), name: String(i.name), fragment: toFragment(i.fragment),
         folderId: map[i.folderId] || null, updatedAt: i.updatedAt || Date.now(),
       }));
@@ -534,7 +534,7 @@
       let data = null;
       try { data = JSON.parse(text); } catch (e) { /* bukan JSON: perlakukan sebagai fragment */ }
       if (data && data.format === 'text-pipeline-collection' && Array.isArray(data.items) && Array.isArray(data.folders)) {
-        const replace = confirm('Import backup.\nOK = ganti semua data saat ini\nBatal = gabungkan dengan data saat ini');
+        const replace = confirm('Importing collection.\nOK = replace all data\nBatal = merge with current data');
         mergeBackup(data, replace);
         showToast(`Diimpor: ${data.items.length} item, ${data.folders.length} folder`);
         return;
@@ -544,7 +544,7 @@
       if (!frag) return showToast('File kosong atau tidak dikenali');
       const item = addItem(file.name.replace(/\.[^.]+$/, ''), frag, selectedFolder);
       applyItem(item);
-      showToast('File dimuat sebagai sumber data');
+      showToast('File loaded as source data');
     };
 
     root.addEventListener('click', (e) => {
@@ -582,7 +582,7 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         e.stopPropagation();
-        const it = sidebarState.items.find((i) => i.id === sidebarState.activeItemId);
+        const it = pipelineManagerState.items.find((i) => i.id === pipelineManagerState.activeItemId);
         if (!it)
           saveCurrentAs();
         else {
@@ -603,7 +603,7 @@
 
     function updateActiveItem(forceIsChanged = false) {
       if (o.getMainState() && !o.getMainState().id)
-          o.getMainState().id = sidebarState.activeItemId;
+          o.getMainState().id = pipelineManagerState.activeItemId;
 
       
       const currentlyActiveRow = root.querySelector(`.fsb-row.active`);
@@ -614,7 +614,7 @@
         currentlyActiveRow.classList.toggle("not-saved", false);
       }
       
-      const item = sidebarState.items.find((i) => i.id === sidebarState.activeItemId);
+      const item = pipelineManagerState.items.find((i) => i.id === pipelineManagerState.activeItemId);
 
       if (!item) return;
       const activeRow = root.querySelector(`.fsb-row[data-id="${item.id}"]`);
@@ -630,16 +630,16 @@
     }
 
     function findSavedByFragment(frag) {
-      return sidebarState.items.find((x) => x.fragment === frag);
+      return pipelineManagerState.items.find((x) => x.fragment === frag);
     }
 
     function findSavedById(id) {
-      return sidebarState.items.find((x) => x.id === id);
+      return pipelineManagerState.items.find((x) => x.id === id);
     }
 
     function resetState(){
-      sidebarState.activeItemId = undefined;
-      sidebarState.id = uid();
+      pipelineManagerState.activeItemId = undefined;
+      pipelineManagerState.id = uid();
       updateActiveItem();
       save();
     }
@@ -650,15 +650,15 @@
       close: () => setOpen(false),
       toggle: () => setOpen(!root.classList.contains('open')),
       refresh: render,
-      getState: () => JSON.parse(JSON.stringify(sidebarState)),
+      getState: () => JSON.parse(JSON.stringify(pipelineManagerState)),
       resetState: resetState,
       addItem, exportAll,
       updateActiveItem: updateActiveItem,
       findSavedByFragment: findSavedByFragment,
-      getActiveItem: () => sidebarState.items.find((x) => x.id === sidebarState.activeItemId),
+      getActiveItem: () => pipelineManagerState.items.find((x) => x.id === pipelineManagerState.activeItemId),
     };
   }
 
 
-  global.FragmentSidebar = { init: create };
+  global.PipelineManager = { init: create };
 })(window);

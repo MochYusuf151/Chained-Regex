@@ -423,8 +423,8 @@
           applyItem(it, true);
           showToast('Loaded');
         }),
-        actBtn('save', 'Save with current data?', () => {
-          if (!confirm(`Save "${it.name}" with current data?`)) return;
+        actBtn('save', 'Overwrite with current data?', () => {
+          if (!confirm(`Overwrite saved "${it.name}" data with current pipeline data?`)) return;
           it.fragment = o.getFragment(); it.updatedAt = Date.now(); save(); showToast('Saved');
         }),
         actBtn('download', 'Save to file', () => download(safeName(it.name) + '.txt', it.fragment)),

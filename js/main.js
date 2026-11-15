@@ -122,7 +122,7 @@
 
     function defaultState() {
         return {
-            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+            id: getUID(),
             title: '',
             description: '',
             autoCompute: true,
@@ -1701,6 +1701,7 @@
         document.getElementById('resetBtn').addEventListener('click', () => {
             if (!confirm('Reset the whole pipeline? This clears the current link.')) return;
             state = defaultState();
+            state.id = getUID();
             
             // Hapus parameter 'd' dari query string (jika ada dari link lama)
             const params = new URLSearchParams(window.location.search);
@@ -1892,6 +1893,10 @@
         }, duration);
     }
 
+    function getUID(){
+        return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    }
+
     /* ============================= Init ============================= */
     function init() {
         state = loadFromUrl();
@@ -1927,12 +1932,23 @@
         renderAll();
         startIntroAnimation();
         showToast(`"${state.title}" loaded`)
-
+        if (upgradeData()) {
+            showToast(`Fill missing data to "${state.title}"`)
+            persistToUrl();
+        }
         // if (!state.id) {
         //     state.id = fragmentSidebar.getActiveItem()?.id;
         //     if (state.id)
         //         persistToUrl();
         // }
+    }
+
+    function upgradeData() {
+        if (!state.id) {
+            state.id = getUID();
+            return true;
+        }
+        return false;
     }
 
     init();

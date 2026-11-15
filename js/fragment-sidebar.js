@@ -87,6 +87,7 @@
     let selectedFolder = null; // folder tujuan untuk item baru
 
     if (o.getMainState()) {
+        sidebarState.activeItemId = undefined;
         let targetId = o.getMainState()?.id;
         let itId = findSavedById(targetId);
         if (itId)
@@ -94,7 +95,6 @@
         if (!sidebarState.activeItemId) {
           const it = findSavedByFragment(o.getFragment());
           if (it) {
-            console.log(it);
             o.getMainState().id = it.id;
             sidebarState.activeItemId = it.id;
           }
@@ -109,8 +109,13 @@
       return { format: 'text-pipeline-collection', version: 1, folders: [], items: [] };
     }
     function save() {
+      let currentActiveStateId = sidebarState.activeItemId;
+      sidebarState.activeItemId = undefined;
       try { localStorage.setItem(o.storageKey, JSON.stringify(sidebarState)); }
       catch (e) { showToast('Gagal menyimpan: localStorage penuh atau diblokir'); }
+      finally {
+        sidebarState.activeItemId = currentActiveStateId;
+      }
       if (o.onChange) o.onChange(sidebarState);
       render();
     }
@@ -539,7 +544,7 @@
     });
     render();
 
-    function updateActiveItem() {
+    function updateActiveItem(forceIsChanged = false) {
       if (o.getMainState() && !o.getMainState().id)
           o.getMainState().id = sidebarState.activeItemId;
 
@@ -560,7 +565,7 @@
 
       if (activeRow) {
         activeRow.classList.toggle("active", true);
-        activeRow.classList.toggle("not-saved", frag !== item.fragment);
+        activeRow.classList.toggle("not-saved", frag !== item.fragment || forceIsChanged);
         rowName.textContent = o.getMainState()?.title;
       }
 
@@ -576,6 +581,7 @@
 
     function resetState(){
       sidebarState.activeItemId = undefined;
+      sidebarState.id = uid();
       updateActiveItem();
       save();
     }

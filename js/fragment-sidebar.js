@@ -85,6 +85,37 @@
     let sidebarState = load();
     const expanded = new Set();
     let selectedFolder = null; // folder tujuan untuk item baru
+    let pendingScroll = false;
+
+    function reveal(folderId) {
+      const seen = new Set();        // proteksi jika ada data parent yang berputar
+      let id = folderId;
+      while (id && !seen.has(id)) {
+        seen.add(id);
+        expanded.add(id);
+        id = sidebarState.folders.find(x => x.id === id)?.parentId ?? null;
+      }
+      pendingScroll = true;
+    }
+
+    // folder penampung untuk item/folder yang sedang aktif
+    function activeContainer() {
+      if (sidebarState.activeItemId) return sidebarState.items.find(i => i.id === sidebarState.activeItemId)?.folderId;
+      return selectedFolder;
+    }
+
+    function scrollToActive() {
+      const tree = root.querySelector('.fsb-tree');
+      const el = tree && tree.querySelector('.fsb-row.active');
+      if (!el) return;
+      const t = tree.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      if (r.top < t.top || r.bottom > t.bottom) {
+        // taruh di tengah area terlihat
+        tree.scrollTop += (r.top - t.top) - (t.height - r.height) / 2;
+      }
+    }
+    
 
     if (o.getMainState()) {
         sidebarState.activeItemId = undefined;
@@ -100,6 +131,8 @@
           }
         }
     }
+
+    reveal(activeContainer());
 
     function load() {
       try {
@@ -294,6 +327,11 @@
       tree.ondrop = (e) => { if (e.target === tree) dropOn(e, null); };
       // updateActiveItem();
 
+      if (pendingScroll) {
+        pendingScroll = false;
+        requestAnimationFrame(scrollToActive);  // tunggu DOM selesai dibuat
+      }
+
     }
 
     function renderLevel(parentId) {
@@ -320,8 +358,7 @@
       if (subs.some(hasActive)) return true;
 
       // item/file di dalam folder (hapus bagian ini jika tidak ada item aktif)
-      console.log(sidebarState.activeItemId);
-      if (sidebarState.activeItemId && sidebarState.items.some(i => i.id === sidebarState.activeItemId && i.folderId === f.id )) return true;
+      if (sidebarState.activeItemId && sidebarState.items.some(i => i.id === sidebarState.activeItemId && i.folderId === f.id)) return true;
 
       return false;
     }

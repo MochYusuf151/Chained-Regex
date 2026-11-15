@@ -83,7 +83,7 @@
 
     // ---------- State & storage ----------
     let sidebarState = load();
-    const collapsed = new Set();
+    const expanded = new Set();
     let selectedFolder = null; // folder tujuan untuk item baru
 
     if (o.getMainState()) {
@@ -141,7 +141,7 @@
       </div>
       <div class="fsb-cur" title=""></div>
       <div class="fsb-tree"></div>
-      <div class="fsb-foot">Drag to move. Click </div>
+      <div class="fsb-foot">Drag to move. Click to load</div>
       <div class="fsb-showToast"></div>`;
     root.querySelector('h3').textContent = o.title;
     const tree = root.querySelector('.fsb-tree');
@@ -312,16 +312,33 @@
       return b;
     }
 
+    function hasActive(f) {
+      if (selectedFolder === f.id) return true;
+
+      // subfolder
+      const subs = sidebarState.folders.filter(x => x.parent === f.id);
+      if (subs.some(hasActive)) return true;
+
+      // item/file di dalam folder (hapus bagian ini jika tidak ada item aktif)
+      console.log(sidebarState.activeItemId);
+      if (sidebarState.activeItemId && sidebarState.items.some(i => i.id === sidebarState.activeItemId && i.folderId === f.id )) return true;
+
+      return false;
+    }
+
     function renderFolder(f) {
       const wrap = document.createElement('div');
       wrap.className = 'fsb-folder';
       const row = document.createElement('div');
       row.className = 'fsb-row' + (selectedFolder === f.id ? ' active' : '');
       row.draggable = true;
-      const open = !collapsed.has(f.id);
+
+      const open = expanded.has(f.id) || hasActive(f);   // <-- perubahan utama
+
       const name = document.createElement('span');
       name.className = 'fsb-name';
       name.textContent = (open ? '▾ ' : '▸ ') + f.name;
+
       const acts = document.createElement('span');
       acts.className = 'fsb-acts';
       acts.append(
@@ -330,13 +347,16 @@
         actBtn('trash', 'Hapus', () => removeFolder(f.id), 'del')
       );
       row.append(name, acts);
+
       row.onclick = () => {
         selectedFolder = selectedFolder === f.id ? null : f.id;
-        if (collapsed.has(f.id)) collapsed.delete(f.id); else collapsed.add(f.id);
+        if (open) expanded.delete(f.id); else expanded.add(f.id);
         render();
       };
+
       wireDrag(row, 'folder', f.id, f.id);
       wrap.appendChild(row);
+
       if (open) {
         const kids = document.createElement('div');
         kids.className = 'fsb-kids';
@@ -413,7 +433,7 @@
       if (!n || !n.trim()) return;
       const f = { id: uid(), name: n.trim(), parentId: parentId || null };
       sidebarState.folders.push(f);
-      collapsed.delete(f.id);
+      expanded.delete(f.id);
       save();
     }
 
@@ -561,6 +581,7 @@
 
       if (!item) return;
       const activeRow = root.querySelector(`.fsb-row[data-id="${item.id}"]`);
+      if (!activeRow) return;
       const rowName = activeRow.querySelector(`.fsb-name`);
 
       if (activeRow) {

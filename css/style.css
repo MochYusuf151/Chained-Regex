@@ -437,26 +437,52 @@ select {
     pointer-events: none;
 }
 
-#runPipelineBtn.is-running {
+#runPipelineBtn.running {
     pointer-events: none;
     cursor: progress;
     filter: brightness(.95);
 }
 
 
-#runPipelineBtn.is-running .icon-play {
+#runPipelineBtn.running .icon-play {
     opacity: 0;
     scale: .6;
     rotate: -45deg;
 }
 
-#runPipelineBtn.is-running .spinner {
+#runPipelineBtn.running .spinner {
     opacity: 1;
     scale: 1;
     animation-play-state: running;
 }
 
-#runPipelineBtn.is-running::after {
+#runPipelineBtn.running::after {
+    opacity: 1;
+    animation-play-state: running;
+}
+
+
+
+#copyResultBtn.copying {
+    pointer-events: none;
+    cursor: progress;
+    filter: brightness(.95);
+}
+
+
+#copyResultBtn.copying .icon-copy {
+    opacity: 0;
+    scale: .6;
+    rotate: -45deg;
+}
+
+#copyResultBtn.copying .spinner {
+    opacity: 1;
+    scale: 1;
+    animation-play-state: running;
+}
+
+#copyResultBtn.copying::after {
     opacity: 1;
     animation-play-state: running;
 }

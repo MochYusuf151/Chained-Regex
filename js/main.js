@@ -1720,14 +1720,19 @@
 
         document.getElementById('copyLinkBtn').addEventListener('click', () => {
             persistToUrl();
+
             setTimeout(() => {
                 navigator.clipboard.writeText(window.location.href).then(() => showToast('Share link copied'));
             }, 320);
         });
 
-        document.getElementById('copyResultBtn').addEventListener('click', () => {
-            setTimeout(() => {
+        let copyingTimeout = null;
+        document.getElementById('copyResultBtn').addEventListener('click', (e) => {
+            e.target.classList.toggle('copying', true);
+            clearTimeout(copyingTimeout);
+            copyingTimeout = setTimeout(() => {
                 navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
+                e.target.classList.toggle('copying', false);
             }, 320);
         });
 
@@ -1748,22 +1753,14 @@
         window.addEventListener('keydown', (event) => {
             if (event.key === 'F8' || ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'enter')) {
                 event.preventDefault();
-                const runPipelineBtn = document.getElementById('runPipelineBtn');
-                refreshAllOutputs(true);
-                runPipelineBtn.classList.toggle("pressed", true);
+                document.getElementById('runPipelineBtn').click();
                 showToast('Pipeline executed');
-                setTimeout(() => runPipelineBtn.classList.toggle("pressed", false), 320);
             }
 
             if (event.key === 'F9' || ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === 'c')) {
                 event.preventDefault();
                 event.stopPropagation();
-                const copyResultBtn = document.getElementById('copyResultBtn');
-                copyResultBtn.classList.toggle("pressed", true);
-                setTimeout(() => {
-                    copyResultBtn.classList.toggle("pressed", false);
-                    navigator.clipboard.writeText(state.stages[state.stages.length - 1].output).then(() => showToast('Pipeline Output Copied'));
-                }, 320);
+                document.getElementById('copyResultBtn').click();
             }
         });
     }
@@ -1786,7 +1783,7 @@
 
         if (!btnShimmerAnimation)
             btnShimmerAnimation = document.getAnimations().find(a => a.animationName === 'btn-shimmer') || null;
-        runPipelineBtn.classList.toggle('is-running', isRunning);
+        runPipelineBtn.classList.toggle('running', isRunning);
         runPipelineBtn.setAttribute('aria-busy', String(isRunning));
         runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
 
@@ -1796,7 +1793,7 @@
             clearTimeout(startToStopTimer);            // batalkan stop yang tertunda
             document.body.classList.toggle('running', true)
             document.body.classList.toggle('stopping', false);
-            runPipelineBtn.classList.toggle('is-running', isRunning);
+            runPipelineBtn.classList.toggle('running', isRunning);
             runPipelineBtn.setAttribute('aria-busy', String(isRunning));
             runPipelineLabel.textContent = isRunning ? 'Running…' : 'Run Pipeline';
         } else {

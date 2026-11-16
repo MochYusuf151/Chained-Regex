@@ -1911,6 +1911,7 @@
             toggleMount: '.topbar-brand',
             loadData: reloadUrl,
             getMainState: () => state,
+            copyState: (id) => state.id = id,
             decodeUrl: decodeState,
             encodeMainState: encodeState,
             updateUrl: persistToUrl,

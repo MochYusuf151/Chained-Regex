@@ -265,6 +265,8 @@
 
     function addItem(name, fragment, folderId) {
       const item = { id: uid(), name, fragment, folderId: folderId || null, updatedAt: Date.now() };
+      o.copyState(item.id);
+      o.updateUrl();
       pipelineManagerState.items.push(item);
       save();
       return item;
